@@ -29,6 +29,12 @@ const supabase = window.supabase.createClient(
   "szjeerdjuyuqyrixqihb",
   "sb_publishable_GpdhY2DBLlI0t3VdzXUWOA_dt43iBLx"
 );
+async function requestNotificationPermission() {
+  if (Notification.permission !== "granted") {
+    await Notification.requestPermission();
+  }
+}
+requestNotificationPermission();
 
 let currentUserId = localStorage.getItem("user_id");
 
@@ -44,6 +50,7 @@ async function saveUsername(){
     loadMessages();
   }
 }
+<audio id="notifSound" src="https://actions.google.com/sounds/v1/alarms/notification_simple.ogg"></audio>
 
 // إرسال الرسائل
 async function sendMessage(){
@@ -77,14 +84,27 @@ async function loadMessages(){
   chat.scrollTop = chat.scrollHeight;
 }
 
-// التحديث اللحظي
-supabase.channel("realtime-messages")
-  .on("postgres_changes",{event:"INSERT",schema:"public",table:"messages"},
-    ()=>loadMessages()
-  ).subscribe();
+if (payload.new.sender_id !== currentUserId) {
+  document.getElementById("notifSound").play();
 
-loadMessages();
+  if (Notification.permission === "granted") {
+    new Notification("رسالة جديدة", {
+      body: "عندك رسالة جديدة في الدردشة",
+    });
+  }
+}
+
+
+      // تشغيل صوت الإشعار لو الرسالة من شخص تاني
+      if (payload.new.sender_id !== currentUserId) {
+        document.getElementById("notifSound").play();
+      }
+    }
+  )
+  .subscribe();
+
 </script>
 </body>
 </html>
+
 

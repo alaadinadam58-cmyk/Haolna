@@ -113,9 +113,34 @@
   <!-- تسجيل الاسم -->
   <div id="loginBox">
     <input type="text" id="username" placeholder="اكتب اسمك..." />
+let { data } = await supabase.from("users")
+    .insert({ username: name })
+    .select()
+    .single();
+
+  localStorage.setItem("uid", data.id);
+  me = data;
+}
+
     <button onclick="startChat()">دخول</button>
   </div>
+/* تحميل المستخدمين */
+async function loadUsers() {
+  let { data } = await supabase
+    .from("users")
+    .select("*")
+    .neq("id", me.id);
 
+  let box = document.getElementById("user-list");
+  box.innerHTML = "<h3>المستخدمين:</h3>";
+
+  data.forEach(u => {
+    let b = document.createElement("button");
+    b.textContent = u.username;
+    b.onclick = () => openChat(u);
+    box.appendChild(b);
+  });
+}
   <!-- الدردشة -->
   <div id="chat" style="display:none;"></div>
 
@@ -130,7 +155,7 @@
 const SUPABASE_URL = "https://szjeerdjuyuqyrixqihb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_GpdhY2DBLlI0t3VdzXUWOA_dt43iBLx";
 
-const supabase = window.supabase.createClient(https://szjeerdjuyuqyrixqihb.supabase.co, sb_publishable_GpdhY2DBLlI0t3VdzXUWOA_dt43iBLx);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentUser = "";
 
@@ -144,5 +169,4 @@ function startChat() {
   document.getElementById("loginBox").style.display = "none";
   document.getElementById("chat").style.display = "flex";
   document.get
-
 

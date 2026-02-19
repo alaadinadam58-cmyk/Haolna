@@ -113,7 +113,6 @@
   <!-- تسجيل الاسم -->
   <div id="loginBox">
     <input type="text" id="username" placeholder="اكتب اسمك..." />
-    <button onclick="startChat()">دخول</button>
     async function initUser() {
   let saved = localStorage.getItem("uid");
 
@@ -133,6 +132,8 @@
   localStorage.setItem("uid", data.id);
   me = data;
 }
+    <button onclick="startChat()">دخول</button>
+    
   </div>
 
   <!-- الدردشة -->

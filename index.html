@@ -43,7 +43,7 @@
         function displayMessage(user, text) {
             const div = document.createElement('div');
             div.className = 'msg';
-            div.innerHTML = `<span class="sender">${user || 'مجهول'}:</span> ${text}`;
+            div.innerHTML = `<span class="sender">${username  || 'مجهول'}:</span> ${text}`;
             chatBox.appendChild(div);
             chatBox.scrollTop = chatBox.scrollHeight;
         }

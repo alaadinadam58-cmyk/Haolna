@@ -1,196 +1,297 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title> دردشة حولنا </title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jamba Chat - دردشة جامبا</title>
 
-<style>
-body { font-family: Arial; margin:20px; }
-#user-list button { display:block; margin:5px 0; padding:6px; cursor:pointer; }
-#messages { height:320px; overflow:auto; border:1px solid #ccc; padding:10px; margin:10px 0; background:#fafafa; }
-.my { color:blue; margin:4px 0; }
-.other { color:green; margin:4px 0; }
-</style>
+  <!-- مكتبة Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h2 { color: #1a73e8; }
+
+    /* صندوق الدردشة */
+    #chat {
+      width: 100%;
+      max-width: 500px;
+      height: 400px;
+      overflow-y: auto;
+      border-radius: 10px;
+      background: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin: 20px 0;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* فقاعات الرسائل */
+    .msg-item {
+      padding: 8px 15px;
+      border-radius: 18px;
+      max-width: 80%;
+      font-size: 14px;
+      line-height: 1.4;
+      position: relative;
+    }
+
+    .my {
+      align-self: flex-end;
+      background-color: #0084ff;
+      color: white;
+      border-bottom-right-radius: 2px;
+    }
+
+    .other {
+      align-self: flex-start;
+      background-color: #e4e6eb;
+      color: #050505;
+      border-bottom-left-radius: 2px;
+    }
+
+    .sender-name {
+      font-size: 10px;
+      display: block;
+      margin-bottom: 3px;
+      font-weight: bold;
+      opacity: 0.8;
+    }
+
+    /* الإدخال */
+    .controls {
+      width: 100%;
+      max-width: 500px;
+      display: flex;
+      gap: 5px;
+    }
+
+    input {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 25px;
+      outline: none;
+    }
+
+    button {
+      padding: 10px 20px;
+      background: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover { background: #1557b0; }
+
+    /* إشعارات عائمة */
+    #notification-container {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 9999;
+      width: 280px;
+    }
+
+    .toast {
+      background: #333;
+      color: white;
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideIn 0.4s ease-out;
+      border-right: 4px solid #1a73e8;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(-120%); }
+      to { transform: translateX(0); }
+    }
+
+    .fade-out { animation: fadeOut 0.5s forwards; }
+
+    @keyframes fadeOut {
+      to { opacity: 0; transform: translateY(-20px); }
+    }
+  </style>
 </head>
+
 <body>
+  <h2>دردشة جامبا</h2>
 
-<h2>  دردشة حولنا</h2>
+  <!-- حفظ الاسم -->
+  <div class="controls">
+    <input id="username" placeholder="اكتب اسمك المستعار..." />
+    <button onclick="saveUsername()">حفظ الاسم</button>
+  </div>
 
-<div id="user-list"></div>
-<h3 id="chat-header">اختر شخص لبدء المحادثة</h3>
-<div id="messages"></div>
+  <!-- الدردشة -->
+  <div id="chat"></div>
 
-<input id="msg" placeholder="اكتب رسالة..." />
-<button id="send">إرسال</button>
+  <!-- إرسال رسالة -->
+  <div class="controls">
+    <input id="message" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMessage()" />
+    <button onclick="sendMessage()">إرسال</button>
+  </div>
 
-<script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+  <!-- الإشعارات -->
+  <div id="notification-container"></div>
 
-/* ضع بيانات مشروعك هنا فقط */
-const supabase = createClient(
-  "https://szjeerdjuyuqyrixqihb.supabase.co",
-  "sb_publishable_GpdhY2DBLlI0t3VdzXUWOA_dt43iBLx"
-);
+  <!-- صوت التنبيه -->
+  <audio id="notifSound">
+    <source src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" type="audio/mpeg" />
+  </audio>
 
-let me = null;
-let chatId = null;
-let channel = null;
+  <script>
+    // ضع مفاتيح Supabase هنا
+    const supabase = window.supabase.createClient(
+      "https://vmsvmvetlpszsmqigonp.supabase.co",
+      "sb_publishable_4sCsIFqPbKbfCY66CsXuzA_hgOFLWO0"
+    );
 
-/* إنشاء أو جلب المستخدم */
-async function initUser() {
-  let saved = localStorage.getItem("uid");
+    let currentUserId = localStorage.getItem("user_id");
 
-  if (saved) {
-    let { data } = await supabase.from("users").select("*").eq("id", saved).single();
-    if (data) { me = data; return; }
-  }
+    // إشعار داخل الصفحة
+    function showUIAppNotification(sender, text) {
+      const container = document.getElementById("notification-container");
+      const audio = document.getElementById("notifSound");
 
-  let name = prompt("اكتب اسمك");
-  if (!name) return;
+      audio.play().catch(() => {});
 
-  let { data } = await supabase.from("users")
-    .insert({ username: name })
-    .select()
-    .single();
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.innerHTML = `
+        <div style="font-size:20px;">💬</div>
+        <div>
+          <div style="font-weight:bold;font-size:12px;">${sender}</div>
+          <div style="font-size:13px;opacity:0.9;">${text}</div>
+        </div>
+      `;
 
-  localStorage.setItem("uid", data.id);
-  me = data;
-}
+      container.appendChild(toast);
 
-/* تحميل المستخدمين */
-async function loadUsers() {
-  let { data } = await supabase
-    .from("users")
-    .select("*")
-    .neq("id", me.id);
+      setTimeout(() => {
+        toast.classList.add("fade-out");
+        setTimeout(() => toast.remove(), 500);
+      }, 4000);
+    }
 
-  let box = document.getElementById("user-list");
-  box.innerHTML = "<h3>المستخدمين</h3>";
+    // طلب إذن إشعارات النظام
+    async function requestNotificationPermission() {
+      if ("Notification" in window && Notification.permission !== "granted") {
+        await Notification.requestPermission();
+      }
+    }
+    requestNotificationPermission();
 
-  data.forEach(u => {
-    let b = document.createElement("button");
-    b.textContent = u.username;
-    b.onclick = () => openChat(u);
-    box.appendChild(b);
-  });
-}
+    // حفظ الاسم
+    async function saveUsername() {
+      const username = document.getElementById("username").value;
+      if (!username) return;
 
-/* فتح محادثة بين شخصين */
-async function openChat(u) {
+      const { data, error } = await supabase
+        .from("users")
+        .insert({ username })
+        .select()
+        .single();
 
-  let { data } = await supabase
-    .from("chats")
-    .select("*")
-    .or(`and(user1.eq.${me.id},user2.eq.${u.id}),and(user1.eq.${u.id},user2.eq.${me.id})`)
-    .single();
+      if (!error) {
+        currentUserId = data.id;
+        localStorage.setItem("user_id", currentUserId);
+        alert("تم حفظ الاسم بنجاح");
+        loadMessages();
+      }
+    }
 
-  if (!data) {
-    let res = await supabase.from("chats")
-      .insert({ user1: me.id, user2: u.id })
-      .select()
-      .single();
-    data = res.data;
-  }
+    // إرسال رسالة
+    async function sendMessage() {
+      const input = document.getElementById("message");
+      const content = input.value;
 
-  chatId = data.id;
+      if (!content || !currentUserId) return;
 
-  document.getElementById("chat-header").textContent = "الدردشة مع " + u.username;
+      const { error } = await supabase
+        .from("messages")
+        .insert({ content, sender_id: currentUserId });
 
-  await loadMessages();
-  listenMessages();
-}
+      if (!error) input.value = "";
+    }
 
-/* تحميل الرسائل القديمة */
-async function loadMessages() {
-  let { data, error } = await supabase
-    .from("messages")
-    .select("text, sender_id, users(username)")
-    .eq("chat_id", chatId)
-    .order("created_at", { ascending: true });
+    // تحميل الرسائل
+    async function loadMessages() {
+      const { data, error } = await supabase
+        .from("messages")
+        .select("content, sender_id, users:sender_id (username)")
+        .order("created_at", { ascending: true });
 
-  if (error) {
-    console.error(error);
-    return;
-  }
+      if (error) return;
 
-  let box = document.getElementById("messages");
-  box.innerHTML = "";
+      const chat = document.getElementById("chat");
+      chat.innerHTML = "";
 
-  data.forEach(msg => {
-    let div = document.createElement("div");
+      data.forEach((msg) => {
+        const div = document.createElement("div");
+        const name = msg.users?.username || "مستخدم";
 
-    let senderName = msg.users?.username || "مستخدم";
+        div.className = `msg-item ${
+          msg.sender_id == currentUserId ? "my" : "other"
+        }`;
 
-    div.textContent = senderName + ": " + msg.text;
-    div.className = msg.sender_id === me.id ? "my" : "other";
+        div.innerHTML = `<span class="sender-name">${name}</span>${msg.content}`;
+        chat.appendChild(div);
+      });
 
-    box.appendChild(div);
-  });
+      chat.scrollTop = chat.scrollHeight;
+    }
 
-  box.scrollTop = box.scrollHeight;
-}
+    // التحديث اللحظي
+    supabase
+      .channel("realtime-messages")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        async (payload) => {
+          const { data: userData } = await supabase
+            .from("users")
+            .select("username")
+            .eq("id", payload.new.sender_id)
+            .single();
 
+          const senderName = userData ? userData.username : "شخص ما";
 
-/* الاستماع اللحظي */
-function listenMessages() {
+          loadMessages();
 
-  if (channel) supabase.removeChannel(channel);
+          if (payload.new.sender_id != currentUserId) {
+            showUIAppNotification(senderName, payload.new.content);
 
-  channel = supabase
-    .channel("room-" + chatId)
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "messages",
-        filter: `chat_id=eq.${chatId}`
-      },
-      payload => addMsg(payload.new)
-    )
-    .subscribe();
-}
+            if (document.hidden && Notification.permission === "granted") {
+              new Notification(`رسالة من ${senderName}`, {
+                body: payload.new.content,
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
 
-/* عرض رسالة في الشاشة */
-function addMsg(msg) {
-  let div = document.createElement("div");
-
-  let senderName = msg.username || "مستخدم";
-
-  div.textContent = senderName + ": " + msg.text;
-
-  div.className = msg.sender_id === me.id ? "my" : "other";
-
-  document.getElementById("messages").appendChild(div);
-}
-
-/* إرسال رسالة */
-document.getElementById("send").onclick = async () => {
-  let t = document.getElementById("msg").value;
-  if (!t || !chatId) return;
-
-  await supabase.from("messages").insert({
-    chat_id: chatId,
-    sender_id: me.id,
-    text: t
-  });
-
-  document.getElementById("msg").value = "";
-
-  /* إظهار فوري */
-  await loadMessages();
-};
-
-/* بدء التشغيل */
-await initUser();
-await loadUsers();
-</script>
-
+    loadMessages();
+  </script>
 </body>
 </html>
-
-
-
-
-

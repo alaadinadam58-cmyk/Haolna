@@ -58,6 +58,23 @@ async function loadUsers() {
     b.onclick = () => openChat(u);
     box.appendChild(b);
   });
+/* تحميل المستخدمين */
+async function loadUsers() {
+  let { data } = await supabase
+    .from("users")
+    .select("*")
+    .neq("id", me.id);
+
+  let box = document.getElementById("user-list");
+  box.innerHTML = "<h3>المستخدمين:</h3>";
+
+  data.forEach(u => {
+    let b = document.createElement("button");
+    b.textContent = u.username;
+    b.onclick = () => openChat(u);
+    box.appendChild(b);
+  });
+}
 }(div);
             chatBox.scrollTop = chatBox.scrollHeight;
         }
@@ -109,5 +126,6 @@ async function loadUsers() {
     </script>
 </body>
 </html>
+
 
 

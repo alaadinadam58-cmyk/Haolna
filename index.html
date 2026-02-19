@@ -113,17 +113,29 @@
   <!-- تسجيل الاسم -->
   <div id="loginBox">
     <input type="text" id="username" placeholder="اكتب اسمك..." />
-   insert({ username: name })
+  
+    <button onclick="startChat()">دخول</button>
+    
+  </div>
+async function initUser() {
+  let saved = localStorage.getItem("uid");
+
+  if (saved) {
+    let { data } = await supabase.from("users").select("*").eq("id", saved).single();
+    if (data) { me = data; return; }
+  }
+
+  let name = prompt("اكتب اسمك");
+  if (!name) return;
+
+  let { data } = await supabase.from("users")
+    .insert({ username: name })
     .select()
     .single();
 
   localStorage.setItem("uid", data.id);
   me = data;
 }
-    <button onclick="startChat()">دخول</button>
-    
-  </div>
-
   <!-- الدردشة -->
   <div id="chat" style="display:none;"></div>
 
@@ -152,6 +164,7 @@ function startChat() {
   document.getElementById("loginBox").style.display = "none";
   document.getElementById("chat").style.display = "flex";
   document.get
+
 
 
 

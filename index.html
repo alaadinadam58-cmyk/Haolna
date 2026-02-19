@@ -112,10 +112,7 @@
 
   <!-- تسجيل الاسم -->
   <div id="loginBox">
-    
-    
-  </div>
-async function initUser() {
+    async function initUser() {
   let saved = localStorage.getItem("uid");
 
   if (saved) {
@@ -134,6 +131,9 @@ async function initUser() {
   localStorage.setItem("uid", data.id);
   me = data;
 }
+    
+  </div>
+
   <!-- الدردشة -->
   <div id="chat" style="display:none;"></div>
 
@@ -162,6 +162,7 @@ function startChat() {
   document.getElementById("loginBox").style.display = "none";
   document.getElementById("chat").style.display = "flex";
   document.get
+
 
 
 

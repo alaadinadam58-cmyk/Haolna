@@ -78,7 +78,7 @@
                 console.error('خطأ في التحميل:', error.message);
             } else if (data) {
                 chatBox.innerHTML = '';
-                data.forEach(m => displayMessage(m.username, m.content));
+                data.forEach(m => displayMessage(m.username, m.text ));
             }
         }
 

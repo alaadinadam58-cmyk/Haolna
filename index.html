@@ -40,22 +40,27 @@
         const chatBox = document.getElementById('chat-box');
 
         // عرض الرسالة مع اسم المرسل
-        async function loadUsers() {
+        function displayMessage(user, text) {
+            const div = document.createElement('div');
+            div.className = 'msg';
+            div.innerHTML = `<span class="sender">/* تحميل المستخدمين */
+async function loadUsers() {
   let { data } = await supabase
     .from("users")
     .select("*")
     .neq("id", me.id);
 
   let box = document.getElementById("user-list");
-  box.innerHTML = "<h3>المستخدمين:</h3>";
-
+  
   data.forEach(u => {
     let b = document.createElement("button");
     b.textContent = u.username;
     b.onclick = () => openChat(u);
     box.appendChild(b);
   });
-}
+}(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
 
         // 1. إرسال الرسالة
         async function sendMessage() {

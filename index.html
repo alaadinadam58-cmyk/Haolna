@@ -273,12 +273,15 @@ document.getElementById("send").onclick = async () => {
   });
 
   document.getElementById("msg").value = "";
+  /* إظهار فوري */
   await loadMessages();
 };
 
+/* بدء التشغيل */
 await initUser();
 await loadUsers();
 </script>
 
 </body>
 </html>
+

@@ -49,27 +49,6 @@ const supabase = createClient(
 let me = null;
 let currentChatUserId = null;
 
-/* إنشاء أو جلب المستخدم */
-async function initUser() {
-  let saved = localStorage.getItem("uid");
-
-  if (saved) {
-    let { data } = await supabase.from("users").select("*").eq("id", saved).single();
-    if (data) { me = data; return; }
-  }
-
-  let name = prompt("اكتب اسمك");
-  if (!name) return;
-
-  let { data } = await supabase.from("users")
-    .insert({ username: name })
-    .select()
-    .single();
-
-  localStorage.setItem("uid", data.id);
-  me = data;
-}
-
 // تحميل قائمة المستخدمين
 async function loadUsers() {
   const { data: users, error } = await supabase.from("users").select("id, username");
@@ -109,34 +88,18 @@ async function loadMessages() {
   messagesDiv.innerHTML = "";
 
   data.forEach(msg => {
-    /* تحميل الرسائل القديمة */
-async function loadMessages() {
-  let { data, error } = await supabase
-    .from("messages")
-    .select("text, sender_id, users(username)")
-    .eq("chat_id", chatId)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    console.error(error);
-    return;
-  }
-
-  let box = document.getElementById("messages");
-  box.innerHTML = "";
-
-  data.forEach(msg => {
-    let div = document.createElement("div");
-
-    let senderName = msg.users?.username || "مستخدم";
-
-    div.textContent = senderName + ": " + msg.text;
-    div.className = msg.sender_id === me.id ? "my" : "other";
-
-    box.appendChild(div);
+    // عرض الرسائل بين المستخدم الحالي والمستخدم المختار فقط
+    if ((msg.sender_id === me.id && msg.receiver_id === currentChatUserId) ||
+        (msg.sender_id === currentChatUserId && msg.receiver_id === me.id)) {
+      const div = document.createElement("div");
+      div.className = msg.sender_id === me.id ? "my" : "other";
+      const senderName = msg.sender_id === me.id ? 'أنا' : 'المستخدم';
+      div.innerHTML = `<span class='sender-name'>${senderName}</span>${msg.content}`;
+      messagesDiv.appendChild(div);
+    }
   });
 
-  box.scrollTop = box.scrollHeight;
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
 // إرسال رسالة
@@ -181,7 +144,4 @@ init();
 </script>
 </body>
 </html>
-
-
-
 

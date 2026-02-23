@@ -2,7 +2,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jamba Chat</title><style>
+<title>Jamba Chat - كامل</title><style>
 body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f2f4f7; display:flex; flex-direction:column; align-items:center; }
 header { width:100%; background:#1a73e8; color:white; padding:15px 20px; font-size:20px; text-align:center; box-shadow:0 2px 5px rgba(0,0,0,0.2); }
 .container { display:flex; max-width:900px; width:100%; margin-top:20px; gap:20px; }
@@ -12,12 +12,13 @@ header { width:100%; background:#1a73e8; color:white; padding:15px 20px; font-si
 .chat-panel { flex:1; display:flex; flex-direction:column; background:white; border-radius:10px; padding:15px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
 #chat-header { font-size:16px; margin-bottom:10px; color:#333; }
 #messages { flex:1; overflow-y:auto; border:1px solid #ccc; padding:10px; background:#fafafa; border-radius:8px; margin-bottom:10px; }
-.my { color:white; background:#0084ff; padding:6px 12px; border-radius:15px; display:inline-block; margin:4px 0; align-self:flex-end; max-width:80%; }
-.other { color:white; background:#4caf50; padding:6px 12px; border-radius:15px; display:inline-block; margin:4px 0; align-self:flex-start; max-width:80%; }
+.my { color:white; background:#0084ff; padding:6px 12px; border-radius:15px; display:inline-block; margin:4px 0; align-self:flex-end; max-width:80%; word-wrap: break-word; }
+.other { color:white; background:#4caf50; padding:6px 12px; border-radius:15px; display:inline-block; margin:4px 0; align-self:flex-start; max-width:80%; word-wrap: break-word; }
 .input-area { display:flex; gap:10px; }
 input { flex:1; padding:10px; border-radius:20px; border:1px solid #ccc; outline:none; }
 button#send { padding:10px 20px; border:none; border-radius:20px; background:#1a73e8; color:white; cursor:pointer; transition:0.3s; }
 button#send:hover { background:#1557b0; }
+.sender-name { font-size:10px; font-weight:bold; display:block; margin-bottom:2px; opacity:0.8; }
 </style></head>
 <body>
 <header>دردشة جامبا</header>
@@ -27,7 +28,7 @@ button#send:hover { background:#1557b0; }
     <h3 id="chat-header">اختر مستخدم لبدء المحادثة</h3>
     <div id="messages"></div>
     <div class="input-area">
-      <input id="msg" placeholder="اكتب رسالة..." />
+      <input id="msg" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMessage()" />
       <button id="send">إرسال</button>
     </div>
   </div>
@@ -67,12 +68,12 @@ function selectUser(user) {
 
 // تحميل الرسائل بين المستخدم الحالي والمختار
 async function loadMessages() {
-  if (!currentChatUserId) return;
+  if (!currentChatUserId || !me) return;
 
   const { data, error } = await supabase
     .from("messages")
-    .select("id, content, sender_id")
-    .or(`sender_id.eq.${currentChatUserId},receiver_id.eq.${currentChatUserId}`)
+    .select("id, content, sender_id, receiver_id")
+    .or(`sender_id.eq.${me.id},receiver_id.eq.${me.id}`)
     .order("created_at", { ascending: true });
 
   if (error) return console.error(error);
@@ -81,18 +82,24 @@ async function loadMessages() {
   messagesDiv.innerHTML = "";
 
   data.forEach(msg => {
-    const div = document.createElement("div");
-    div.className = msg.sender_id === me?.id ? "my" : "other";
-    div.textContent = msg.content;
-    messagesDiv.appendChild(div);
+    // عرض الرسائل بين المستخدم الحالي والمستخدم المختار فقط
+    if ((msg.sender_id === me.id && msg.receiver_id === currentChatUserId) ||
+        (msg.sender_id === currentChatUserId && msg.receiver_id === me.id)) {
+      const div = document.createElement("div");
+      div.className = msg.sender_id === me.id ? "my" : "other";
+      const senderName = msg.sender_id === me.id ? 'أنا' : 'المستخدم';
+      div.innerHTML = `<span class='sender-name'>${senderName}</span>${msg.content}`;
+      messagesDiv.appendChild(div);
+    }
   });
 
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
 // إرسال رسالة
-document.getElementById("send").onclick = async () => {
-  const content = document.getElementById("msg").value;
+async function sendMessage() {
+  const input = document.getElementById("msg");
+  const content = input.value;
   if (!content || !currentChatUserId || !me) return;
 
   const { error } = await supabase.from("messages").insert({
@@ -102,14 +109,18 @@ document.getElementById("send").onclick = async () => {
   });
 
   if (!error) {
-    document.getElementById("msg").value = "";
+    input.value = "";
+    loadMessages();
   }
-};
+}
+
+document.getElementById("send").onclick = sendMessage;
 
 // التحديث اللحظي للرسائل
 supabase.channel('realtime-messages')
   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-    if (currentChatUserId && (payload.new.sender_id === currentChatUserId || payload.new.receiver_id === currentChatUserId)) {
+    if ((payload.new.sender_id === me.id && payload.new.receiver_id === currentChatUserId) ||
+        (payload.new.sender_id === currentChatUserId && payload.new.receiver_id === me.id)) {
       loadMessages();
     }
   })
@@ -117,9 +128,8 @@ supabase.channel('realtime-messages')
 
 // عند تحميل الصفحة
 async function init() {
-  // افترضنا أن المستخدم الحالي هو أول مستخدم (للتجربة)
   const { data: users } = await supabase.from("users").select("id, username").limit(1);
-  me = users?.[0];
+  me = users?.[0]; // المستخدم الحالي افتراضيًا
 
   loadUsers();
 }

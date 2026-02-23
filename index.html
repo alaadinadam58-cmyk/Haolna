@@ -44,64 +44,47 @@ button#send:hover, button#saveName:hover { background:#1557b0; }
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-const supabase = createClient(
-  "https://szjeerdjuyuqyrixqihb.supabase.co",
-  "sb_publishable_GpdhY2DBLlI0t3VdzXUWOA_dt43iBLx"
+const supabase = window.supabase.createClient(
+  "YOUR_SUPABASE_URL",
+  "YOUR_SUPABASE_ANON_KEY"
 );
 
-let me = null;
-let currentChatUserId = null;
+let currentUser = null;
+let currentUserId = null;
+let selectedUser = null;
+let selectedUserId = null;
+let currentChatId = null;
 
-// تحميل المستخدمين
-async function loadUsers() {
-  const { data: users, error } = await supabase.from("users").select("id, username");
-  if (error) return console.error(error);
+window.onload = async () => {
+  const savedUser = localStorage.getItem("chatUser");
+  if (savedUser) {
+    currentUser = savedUser;
+    await loadCurrentUser();
+    startChat();
+  }
+};
 
-  const userList = document.getElementById("user-list");
-  userList.innerHTML = "";
+async function loadCurrentUser() {
+  const { data } = await supabase
+    .from("users")
+    .select("*")
+    .eq("username", currentUser)
+    .single();
 
-  users.forEach(user => {
-    if(user.id !== me.id){ // استبعاد المستخدم الحالي
-      const btn = document.createElement("button");
-      btn.textContent = user.username;
-      btn.onclick = () => selectUser(user);
-      userList.appendChild(btn);
-    }
-  });
+  currentUserId = data.id;
 }
 
-function selectUser(user) {
-  currentChatUserId = user.id;
-  document.getElementById("chat-header").textContent = `المحادثة مع ${user.username}`;
-  document.getElementById("chat-input-area").style.display = 'flex';
-  loadMessages();
-}
+async function registerUser() {
+  const username = document.getElementById("usernameInput").value.trim();
+  if (!username) return alert("ادخل اسم صحيح");
 
-async function loadMessages() {
-  if (!currentChatUserId || !me) return;
+  let { data } = await supabase
+    .from("users")
+    .select("*")
+    .eq("username", username)
+    .single();
 
-  const { data, error } = await supabase
-    .from("messages")
-    .select("id, content, sender_id, receiver_id, created_at")
-    .order("created_at", { ascending: true });
-
-  if (error) return console.error(error);
-
-  const messagesDiv = document.getElementById("messages");
-  messagesDiv.innerHTML = "";
-
-  data.forEach(msg => {
-    if ((msg.sender_id === me.id && msg.receiver_id === currentChatUserId) ||
-        (msg.sender_id === currentChatUserId && msg.receiver_id === me.id)) {
-      const div = document.createElement("div");
-      div.className = msg.sender_id === me.id ? "my" : "other";
-      const senderName = msg.sender_id === me.id ? 'أنا' : 'المستخدم';
-      div.innerHTML = `<span class='sender-name'>${senderName}</span>${msg.content}`;
-      messagesDiv.appendChild(div);
-    }
-  });
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
-}
+  if (!data) {
 
 async function sendMessage() {
   const input = document.getElementById("msg");
@@ -148,3 +131,4 @@ supabase.channel('realtime-messages')
 </script>
 </body>
 </html>
+

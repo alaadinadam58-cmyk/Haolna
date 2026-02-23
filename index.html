@@ -40,6 +40,28 @@ button:hover { background:#1557b0; }
       <input id="msg" placeholder="اكتب رسالة..." />
       <button id="send">إرسال</button>
     </div>
+// تحميل قائمة المستخدمين
+async function loadUsers() {
+  const { data: users, error } = await supabase.from("users").select("id, username");
+  if (error) return console.error(error);
+
+  const userList = document.getElementById("user-list");
+  userList.innerHTML = "";
+
+  users.forEach(user => {
+    const btn = document.createElement("button");
+    btn.textContent = user.username;
+    btn.onclick = () => selectUser(user);
+    userList.appendChild(btn);
+  });
+}
+
+// اختيار المستخدم لبدء المحادثة
+function selectUser(user) {
+  currentChatUserId = user.id;
+  document.getElementById("chat-header").textContent = `المحادثة مع ${user.username}`;
+  loadMessages();
+}
 
     <div class="input-area" id="username-area">
       <input id="username" placeholder="اكتب اسمك لتسجيل الدخول..." />
@@ -181,3 +203,4 @@ document.getElementById("send").addEventListener("click", async () => {
 supabase.channel("realtime")
   .on("postgres_changes",
     { event: "INSERT
+

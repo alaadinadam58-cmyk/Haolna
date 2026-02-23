@@ -32,8 +32,8 @@ button#send:hover { background:#1557b0; }
     <h3 id="chat-header">اختر مستخدم لبدء المحادثة</h3>
     <div id="messages"></div>
     <div class="input-area">
-      <input id="msg" placeholder="اكتب رسالة..." />
-<button id="send">إرسال</button>
+      <input id="msg" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMessage()" />
+      <button id="send">إرسال</button>
     </div>
   </div>
 </div>

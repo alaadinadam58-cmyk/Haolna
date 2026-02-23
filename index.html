@@ -1,28 +1,70 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jamba Chat - تسجيل المستخدم</title>
+
+<style>
+body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f2f4f7; display:flex; flex-direction:column; align-items:center; }
+header { width:100%; background:#1a73e8; color:white; padding:15px 20px; font-size:20px; text-align:center; box-shadow:0 2px 5px rgba(0,0,0,0.2); }
+.container { display:flex; max-width:900px; width:100%; margin-top:20px; gap:20px; }
+#user-list { width:30%; background:white; border-radius:10px; padding:15px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
+#user-list button { display:block; width:100%; margin:8px 0; padding:10px; border:none; border-radius:8px; cursor:pointer; background:#e4e6eb; transition:0.3s; }
+#user-list button:hover { background:#cfd3d8; }
+.chat-panel { flex:1; display:flex; flex-direction:column; background:white; border-radius:10px; padding:15px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
+#chat-header { font-size:16px; margin-bottom:10px; color:#333; }
+#messages { flex:1; overflow-y:auto; border:1px solid #ccc; padding:10px; background:#fafafa; border-radius:8px; margin-bottom:10px; display:flex; flex-direction:column; }
+.my { color:white; background:#0084ff; padding:6px 12px; border-radius:15px; margin:4px 0; align-self:flex-end; max-width:80%; word-wrap: break-word; }
+.other { color:white; background:#4caf50; padding:6px 12px; border-radius:15px; margin:4px 0; align-self:flex-start; max-width:80%; word-wrap: break-word; }
+.input-area { display:flex; gap:10px; }
+input { flex:1; padding:10px; border-radius:20px; border:1px solid #ccc; outline:none; }
+button { padding:10px 20px; border:none; border-radius:20px; background:#1a73e8; color:white; cursor:pointer; }
+button:hover { background:#1557b0; }
+</style>
+</head>
+
+<body>
+
+<header>دردشة حولنا</header>
+
+<div class="container">
+  <div id="user-list"></div>
+
+  <div class="chat-panel">
+    <h3 id="chat-header">اختر مستخدم لبدء المحادثة</h3>
+
+    <div id="messages"></div>
+
+    <div class="input-area" id="chat-input-area" style="display:none;">
+      <input id="msg" placeholder="اكتب رسالة..." />
+      <button id="send">إرسال</button>
+    </div>
+
+    <div class="input-area" id="username-area">
+      <input id="username" placeholder="اكتب اسمك لتسجيل الدخول..." />
+      <button id="saveName">حفظ الاسم</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 document.addEventListener("DOMContentLoaded", async () => {
 
 const supabase = createClient(
-  "https://szjeerdjuyuqyrixqihb.supabase.co",
-  "sb_publishable_GpdhY2DBLlI0t3VdzXUWOA_dt43iBLx"
+ "https://szjeerdjuyuqyrixqihb.supabase.co",
+ "sb_publishable_GpdhY2DBLlI0t3VdzXUWOA_dt43iBLx"
 );
 
 let me = null;
 let currentChatId = null;
 
-/* ========================= */
 /* تحميل المستخدم المحفوظ */
-/* ========================= */
-
 const savedId = localStorage.getItem("user_id");
 if (savedId) {
-  const { data } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", savedId)
-    .single();
-
+  const { data } = await supabase.from("users").select("*").eq("id", savedId).single();
   if (data) {
     me = data;
     document.getElementById("username-area").style.display = "none";
@@ -30,10 +72,7 @@ if (savedId) {
   }
 }
 
-/* ========================= */
 /* حفظ الاسم */
-/* ========================= */
-
 document.getElementById("saveName").addEventListener("click", async () => {
   const username = document.getElementById("username").value.trim();
   if (!username) return;
@@ -52,10 +91,7 @@ document.getElementById("saveName").addEventListener("click", async () => {
   loadUsers();
 });
 
-/* ========================= */
 /* تحميل المستخدمين */
-/* ========================= */
-
 async function loadUsers() {
   const { data } = await supabase
     .from("users")
@@ -73,11 +109,9 @@ async function loadUsers() {
   });
 }
 
-/* ========================= */
 /* بدء محادثة */
-/* ========================= */
-
 async function startChat(user) {
+
   document.getElementById("chat-header").textContent =
     "محادثة مع " + user.username;
 
@@ -104,10 +138,7 @@ async function startChat(user) {
   loadMessages();
 }
 
-/* ========================= */
 /* تحميل الرسائل */
-/* ========================= */
-
 async function loadMessages() {
   if (!currentChatId) return;
 
@@ -130,10 +161,7 @@ async function loadMessages() {
   box.scrollTop = box.scrollHeight;
 }
 
-/* ========================= */
 /* إرسال رسالة */
-/* ========================= */
-
 document.getElementById("send").addEventListener("click", async () => {
   const input = document.getElementById("msg");
   const text = input.value.trim();
@@ -149,59 +177,7 @@ document.getElementById("send").addEventListener("click", async () => {
   loadMessages();
 });
 
-/* ========================= */
-/* التحديث اللحظي */
-/* ========================= */
-
-supabase.channel("realtime")
-  .on(
-    "postgres_changes",
-    { event: "INSERT", schema: "public", table: "messages" },
-    payload => {
-      if (payload.new.chat_id === currentChatId) {
-        loadMessages();
-      }
-    }
-  )
-  .subscribe();
-
-});
-</script>
-
-
-/* ========================= */
-/* إرسال رسالة */
-/* ========================= */
-
-document.getElementById("send").onclick = async () => {
-  const input = document.getElementById("msg");
-  const text = input.value.trim();
-  if (!text || !currentChatId) return;
-
-  await supabase.from("messages").insert({
-    chat_id: currentChatId,
-    sender_id: me.id,
-    text: text
-  });
-
-  input.value = "";
-  loadMessages();
-};
-
-/* ========================= */
-/* التحديث اللحظي */
-/* ========================= */
-
+/* تحديث لحظي */
 supabase.channel("realtime")
   .on("postgres_changes",
-    { event: "INSERT", schema: "public", table: "messages" },
-    payload => {
-      if (payload.new.chat_id === currentChatId) {
-        loadMessages();
-      }
-    })
-  .subscribe();
-
-</script>
-
-
+    { event: "INSERT

@@ -45,8 +45,8 @@ button#send:hover, button#saveName:hover { background:#1557b0; }
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 const supabase = window.supabase.createClient(
-  "YOUR_SUPABASE_URL",
-  "YOUR_SUPABASE_ANON_KEY"
+  "https://szjeerdjuyuqyrixqihb.supabase.co",
+  "b_publishable_GpdhY2DBLlI0t3VdzXUWOA_dt43iBLx"
 );
 
 let currentUser = null;
@@ -131,4 +131,5 @@ supabase.channel('realtime-messages')
 </script>
 </body>
 </html>
+
 

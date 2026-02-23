@@ -1,88 +1,36 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام محاسبة البقالة + دفتر الديون</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        body { 
-            background-color: #f0f2f5; 
-            font-family: 'Tajawal', sans-serif; 
-        }
-        .main-container { padding: 20px; }
-        .card { border-radius: 12px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .product-item { cursor: pointer; transition: 0.2s; background: #fff; }
-        .product-item:hover { background: #e9ecef; transform: scale(1.02); }
-        .cart-scroll { height: 300px; overflow-y: auto; border-bottom: 2px solid #eee; margin-bottom: 15px; }
-        .debt-table { font-size: 0.9rem; }
-        .badge-debt { background-color: #ff4757; color: white; }
-        .nav-tabs .nav-link { color: #555; fw: bold; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title> دردشة الجمبة </title>
+
+<style>
+body { font-family: Arial; margin:20px; }
+#user-list button { display:block; margin:5px 0; padding:6px; cursor:pointer; }
+#messages { height:320px; overflow:auto; border:1px solid #ccc; padding:10px; margin:10px 0; background:#fafafa; }
+.my { color:blue; margin:4px 0; }
+.other { color:green; margin:4px 0; }
+</style>
 </head>
 <body>
 
-<nav class="navbar navbar-dark bg-primary mb-4">
-    <div class="container-fluid">
-        <span class="navbar-brand mb-0 h1">نظام بقالة المستقبل 🛒</span>
-    </div>
-</nav>
+<h2>  دردشة الجمبة</h2>
 
-<div class="container-fluid main-container">
-    <div class="row">
-        
-        <div class="col-md-8">
-            <ul class="nav nav-tabs mb-3" id="myTab" role="tablist">
-                <li class="nav-item">
-                    <button class="nav-link active" id="pos-tab" data-bs-toggle="tab" data-bs-target="#pos">نقطة البيع</button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" id="debts-tab" data-bs-toggle="tab" data-bs-target="#debts">دفتر الديون 📔</button>
-                </li>
-            </ul>
+<div id="user-list"></div>
+<h3 id="chat-header">اختر شخص لبدء المحادثة</h3>
+<div id="messages"></div>
 
-            <div class="tab-content" id="myTabContent">
-                <div class="tab-pane fade show active" id="pos">
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <div class="card p-3 product-item text-center" onclick="addToCart('حليب طازج', 7.00)">
-                                <h6>حليب طازج</h6>
-                                <span class="text-primary fw-bold">7.00 ر.س</span>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card p-3 product-item text-center" onclick="addToCart('خبز عائلي', 1.50)">
-                                <h6>خبز عائلي</h6>
-                                <span class="text-primary fw-bold">1.50 ر.س</span>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card p-3 product-item text-center" onclick="addToCart('كرتون مياه', 18.00)">
-                                <h6>كرتون مياه</h6>
-                                <span class="text-primary fw-bold">18.00 ر.س</span>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card p-3 product-item text-center" onclick="addToCart('زيت طبخ', 14.00)">
-                                <h6>زيت طبخ</h6>
-                                <span class="text-primary fw-bold">14.00 ر.س</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<input id="msg" placeholder="اكتب رسالة..." />
+<button id="send">إرسال</button>
 
-                <div class="tab-pane fade" id="debts">
-                    <div class="card p-3">
-                        <h5>قائمة الديون المستحقة</h5>
-                        <table class="table table-hover debt-table">
-                            <thead>
-                                <tr>
-                                    <th>العميل</th>
-                                    <th>المبلغ</th>
-                                    <th>التاريخ</th>
-                                    <th>إجراء</th>
-                                </tr>
-                            </thead>
-                            
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
+/* ضع بيانات مشروعك هنا فقط */
+const supabase = createClient(
+  "https://vmsvmvetlpszsmqigonp.supabase.co",
+  "sb_publishable_4sCsIFqPbKbfCY66CsXuzA_hgOFLWO0"
+);
+
+let me = null;

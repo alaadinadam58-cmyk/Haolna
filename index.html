@@ -70,47 +70,27 @@ async function initUser() {
   me = data;
 }
 
-/* تحميل المستخدمين */
+// تحميل قائمة المستخدمين
 async function loadUsers() {
-  let { data } = await supabase
-    .from("users")
-    .select("*")
-    .neq("id", me.id);
+  const { data: users, error } = await supabase.from("users").select("id, username");
+  if (error) return console.error(error);
 
-  let box = document.getElementById("user-list");
-  box.innerHTML = "<h3>المستخدمين:</h3>";
+  const userList = document.getElementById("user-list");
+  userList.innerHTML = "";
 
-  data.forEach(u => {
-    let b = document.createElement("button");
-    b.textContent = u.username;
-    b.onclick = () => openChat(u);
-    box.appendChild(b);
+  users.forEach(user => {
+    const btn = document.createElement("button");
+    btn.textContent = user.username;
+    btn.onclick = () => selectUser(user);
+    userList.appendChild(btn);
   });
 }
 
-/* فتح محادثة بين شخصين */
-async function openChat(u) {
-
-  let { data } = await supabase
-    .from("chats")
-    .select("*")
-    .or(`and(user1.eq.${me.id},user2.eq.${u.id}),and(user1.eq.${u.id},user2.eq.${me.id})`)
-    .single();
-
-  if (!data) {
-    let res = await supabase.from("chats")
-      .insert({ user1: me.id, user2: u.id })
-      .select()
-      .single();
-    data = res.data;
-  }
-
-  chatId = data.id;
-
-  document.getElementById("chat-header").textContent = "الدردشة مع " + u.username;
-
-  await loadMessages();
-  listenMessages();
+// اختيار المستخدم لبدء المحادثة
+function selectUser(user) {
+  currentChatUserId = user.id;
+  document.getElementById("chat-header").textContent = `المحادثة مع ${user.username}`;
+  loadMessages();
 }
 
 // تحميل الرسائل بين المستخدم الحالي والمختار
@@ -201,6 +181,7 @@ init();
 </script>
 </body>
 </html>
+
 
 
 

@@ -1,135 +1,161 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jamba Chat - تسجيل المستخدم</title>
-<style>
-body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f2f4f7; display:flex; flex-direction:column; align-items:center; }
-header { width:100%; background:#1a73e8; color:white; padding:15px 20px; font-size:20px; text-align:center; box-shadow:0 2px 5px rgba(0,0,0,0.2); }
-.container { display:flex; max-width:900px; width:100%; margin-top:20px; gap:20px; }
-#user-list { width:30%; background:white; border-radius:10px; padding:15px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
-#user-list button { display:block; width:100%; margin:8px 0; padding:10px; border:none; border-radius:8px; cursor:pointer; background:#e4e6eb; transition:0.3s; }
-#user-list button:hover { background:#cfd3d8; }
-.chat-panel { flex:1; display:flex; flex-direction:column; background:white; border-radius:10px; padding:15px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
-#chat-header { font-size:16px; margin-bottom:10px; color:#333; }
-#messages { flex:1; overflow-y:auto; border:1px solid #ccc; padding:10px; background:#fafafa; border-radius:8px; margin-bottom:10px; }
-.my { color:white; background:#0084ff; padding:6px 12px; border-radius:15px; display:inline-block; margin:4px 0; align-self:flex-end; max-width:80%; word-wrap: break-word; }
-.other { color:white; background:#4caf50; padding:6px 12px; border-radius:15px; display:inline-block; margin:4px 0; align-self:flex-start; max-width:80%; word-wrap: break-word; }
-.input-area { display:flex; gap:10px; }
-input { flex:1; padding:10px; border-radius:20px; border:1px solid #ccc; outline:none; }
-button#send, button#saveName { padding:10px 20px; border:none; border-radius:20px; background:#1a73e8; color:white; cursor:pointer; transition:0.3s; }
-button#send:hover, button#saveName:hover { background:#1557b0; }
-.sender-name { font-size:10px; font-weight:bold; display:block; margin-bottom:2px; opacity:0.8; }
-</style>
-</head>
-<body>
-<header>دردشة جامبا</header>
-<div class="container">
-  <div id="user-list"></div>
-  <div class="chat-panel">
-    <h3 id="chat-header">اختر مستخدم لبدء المحادثة</h3>
-    <div id="messages"></div>
-    <div class="input-area" id="chat-input-area" style="display:none;">
-      <input id="msg" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMessage()" />
-      <button id="send">إرسال</button>
-    </div>
-    <div class="input-area" id="username-area">
-      <input id="username" placeholder="اكتب اسمك لتسجيل الدخول..." />
-      <button id="saveName">حفظ الاسم</button>
-    </div>
-  </div>
-</div>
-
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-const supabase = window.supabase.createClient(
+const supabase = createClient(
   "https://szjeerdjuyuqyrixqihb.supabase.co",
-  "b_publishable_GpdhY2DBLlI0t3VdzXUWOA_dt43iBLx"
+  "sb_publishable_GpdhY2DBLlI0t3VdzXUWOA_dt43iBLx"
 );
 
-let currentUser = null;
-let currentUserId = null;
-let selectedUser = null;
-let selectedUserId = null;
+let me = null;
 let currentChatId = null;
+let selectedUserId = null;
+
+/* ========================= */
+/* تحميل المستخدم المحفوظ */
+/* ========================= */
 
 window.onload = async () => {
-  const savedUser = localStorage.getItem("chatUser");
-  if (savedUser) {
-    currentUser = savedUser;
-    await loadCurrentUser();
-    startChat();
+  const savedId = localStorage.getItem("user_id");
+  if (savedId) {
+    const { data } = await supabase.from("users").select("*").eq("id", savedId).single();
+    if (data) {
+      me = data;
+      document.getElementById("username-area").style.display = "none";
+      loadUsers();
+    }
   }
 };
 
-async function loadCurrentUser() {
-  const { data } = await supabase
-    .from("users")
-    .select("*")
-    .eq("username", currentUser)
-    .single();
+/* ========================= */
+/* حفظ اسم المستخدم */
+/* ========================= */
 
-  currentUserId = data.id;
-}
-
-async function registerUser() {
-  const username = document.getElementById("usernameInput").value.trim();
-  if (!username) return alert("ادخل اسم صحيح");
-
-  let { data } = await supabase
-    .from("users")
-    .select("*")
-    .eq("username", username)
-    .single();
-
-  if (!data) {
-
-async function sendMessage() {
-  const input = document.getElementById("msg");
-  const content = input.value;
-  if (!content || !currentChatUserId || !me) return;
-
-  const { error } = await supabase.from("messages").insert({
-    content,
-    sender_id: me.id,
-    receiver_id: currentChatUserId
-  });
-
-  if (!error) {
-    input.value = "";
-    loadMessages();
-  }
-}
-
-document.getElementById("send").onclick = sendMessage;
-
-// حفظ الاسم إذا لم يكن موجود
 document.getElementById("saveName").onclick = async () => {
-  const usernameInput = document.getElementById("username");
-  const username = usernameInput.value.trim();
+  const username = document.getElementById("username").value.trim();
   if (!username) return;
 
-  const { data, error } = await supabase.from("users").insert({username}).select().single();
-  if (error) return console.error(error);
+  const { data, error } = await supabase
+    .from("users")
+    .insert({ username })
+    .select()
+    .single();
+
+  if (error) return alert(error.message);
 
   me = data;
-  document.getElementById("username-area").style.display = 'none';
+  localStorage.setItem("user_id", me.id);
+  document.getElementById("username-area").style.display = "none";
   loadUsers();
 };
 
-// التحديث اللحظي للرسائل
-supabase.channel('realtime-messages')
-  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-    if (currentChatUserId && ((payload.new.sender_id === me.id && payload.new.receiver_id === currentChatUserId) ||
-        (payload.new.sender_id === currentChatUserId && payload.new.receiver_id === me.id))) {
-      loadMessages();
-    }
-  })
+/* ========================= */
+/* تحميل المستخدمين */
+/* ========================= */
+
+async function loadUsers() {
+  const { data } = await supabase
+    .from("users")
+    .select("*")
+    .neq("id", me.id);
+
+  const list = document.getElementById("user-list");
+  list.innerHTML = "";
+
+  data.forEach(user => {
+    const btn = document.createElement("button");
+    btn.textContent = user.username;
+    btn.onclick = () => startChat(user);
+    list.appendChild(btn);
+  });
+}
+
+/* ========================= */
+/* بدء محادثة */
+/* ========================= */
+
+async function startChat(user) {
+  selectedUserId = user.id;
+  document.getElementById("chat-header").textContent = "محادثة مع " + user.username;
+  document.getElementById("chat-input-area").style.display = "flex";
+
+  // البحث عن شات موجود
+  const { data: chats } = await supabase
+    .from("chats")
+    .select("*")
+    .or(`and(user1.eq.${me.id},user2.eq.${user.id}),and(user1.eq.${user.id},user2.eq.${me.id})`)
+    .limit(1);
+
+  if (chats.length > 0) {
+    currentChatId = chats[0].id;
+  } else {
+    const { data: newChat } = await supabase
+      .from("chats")
+      .insert({ user1: me.id, user2: user.id })
+      .select()
+      .single();
+    currentChatId = newChat.id;
+  }
+
+  loadMessages();
+}
+
+/* ========================= */
+/* تحميل الرسائل */
+/* ========================= */
+
+async function loadMessages() {
+  if (!currentChatId) return;
+
+  const { data } = await supabase
+    .from("messages")
+    .select("*")
+    .eq("chat_id", currentChatId)
+    .order("created_at", { ascending: true });
+
+  const box = document.getElementById("messages");
+  box.innerHTML = "";
+
+  data.forEach(msg => {
+    const div = document.createElement("div");
+    div.className = msg.sender_id === me.id ? "my" : "other";
+    div.textContent = msg.text;
+    box.appendChild(div);
+  });
+
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ========================= */
+/* إرسال رسالة */
+/* ========================= */
+
+document.getElementById("send").onclick = async () => {
+  const input = document.getElementById("msg");
+  const text = input.value.trim();
+  if (!text || !currentChatId) return;
+
+  await supabase.from("messages").insert({
+    chat_id: currentChatId,
+    sender_id: me.id,
+    text: text
+  });
+
+  input.value = "";
+  loadMessages();
+};
+
+/* ========================= */
+/* التحديث اللحظي */
+/* ========================= */
+
+supabase.channel("realtime")
+  .on("postgres_changes",
+    { event: "INSERT", schema: "public", table: "messages" },
+    payload => {
+      if (payload.new.chat_id === currentChatId) {
+        loadMessages();
+      }
+    })
   .subscribe();
+
 </script>
-</body>
-</html>
-
-

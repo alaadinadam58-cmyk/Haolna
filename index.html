@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>دردشة بين شخصين</title>
+  <title>دردشة بين شخصين - Supabase</title>
+
+  <!-- مكتبة Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     html, body {
@@ -14,7 +17,6 @@
       background-color: #f5f5f5;
     }
 
-    /* شاشة المستخدمين */
     #users-screen, #chat-screen {
       height: 100%;
       display: none;
@@ -25,7 +27,6 @@
       display: flex;
     }
 
-    /* قائمة المستخدمين */
     #users-list {
       flex: 1;
       overflow-y: auto;
@@ -45,7 +46,6 @@
       background-color: #e0e0e0;
     }
 
-    /* شاشة المحادثة */
     #chat-container {
       flex: 1;
       display: flex;
@@ -112,7 +112,6 @@
       background-color: #357abd;
     }
 
-    /* زر العودة */
     #back-button {
       margin-bottom: 10px;
       padding: 8px 15px;
@@ -126,22 +125,25 @@
     #back-button:hover {
       background-color: #e64a19;
     }
+
+    h2, h3 {
+      text-align: center;
+      margin: 10px 0;
+    }
   </style>
 </head>
 <body>
 
   <!-- شاشة اختيار المستخدم -->
   <div id="users-screen" class="active">
-    <h2 style="text-align:center;">اختر المستخدم للمحادثة</h2>
-    <div id="users-list">
-      <!-- المستخدمين -->
-    </div>
+    <h2>اختر المستخدم للمحادثة</h2>
+    <div id="users-list"></div>
   </div>
 
   <!-- شاشة المحادثة -->
   <div id="chat-screen">
     <button id="back-button">⬅ العودة لاختيار المستخدم</button>
-    <h3 id="chat-with" style="text-align:center;"></h3>
+    <h3 id="chat-with"></h3>
     <div id="chat-container">
       <div id="messages-container"></div>
       <div id="input-container">
@@ -152,18 +154,10 @@
   </div>
 
   <script>
-    // بيانات محاكاة للمستخدمين والمحادثات القديمة
-    const users = [
-      {id: 1, name: 'أحمد'},
-      {id: 2, name: 'ليلى'},
-      {id: 3, name: 'سارة'}
-    ];
-
-    const chats = {
-      1: [ {sender:'bot', text:'مرحباً أحمد!'}, {sender:'user', text:'أهلاً!'} ],
-      2: [ {sender:'bot', text:'مرحبا ليلى!'}, {sender:'user', text:'مرحباً!'} ],
-      3: [ {sender:'bot', text:'مرحباً سارة!'} ]
-    };
+    // تهيئة Supabase
+    const supabaseUrl = 'https://YOUR_PROJECT.supabase.co';
+    const supabaseKey = 'PUBLIC_ANON_KEY';
+    const supabase = Supabase.createClient(supabaseUrl, supabaseKey);
 
     const usersList = document.getElementById('users-list');
     const usersScreen = document.getElementById('users-screen');
@@ -174,29 +168,10 @@
     const sendButton = document.getElementById('send-button');
     const backButton = document.getElementById('back-button');
 
-    let currentUserId = null;
+    let currentUserId = 1; // معرف المستخدم الحالي
+    let selectedUserId = null;
 
-    // عرض المستخدمين
-    users.forEach(user => {
-      const div = document.createElement('div');
-      div.className = 'user-item';
-      div.innerText = user.name;
-      div.addEventListener('click', () => openChat(user.id, user.name));
-      usersList.appendChild(div);
-    });
-
-    function openChat(userId, userName) {
-      currentUserId = userId;
-      chatWith.innerText = `المحادثة مع ${userName}`;
-      usersScreen.classList.remove('active');
-      chatScreen.classList.add('active');
-      messagesContainer.innerHTML = '';
-
-      // عرض الرسائل القديمة
-      const history = chats[userId] || [];
-      history.forEach(msg => showMessage(msg.text, msg.sender));
-    }
-
+    // دالة عرض الرسالة
     function showMessage(text, sender) {
       const msgDiv = document.createElement('div');
       msgDiv.className = `message ${sender}`;
@@ -205,33 +180,69 @@
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
-    function botReply(text) {
-      setTimeout(() => {
-        showMessage("رد تلقائي: " + text, "bot");
-        // حفظ المحادثة
-        chats[currentUserId].push({sender:'bot', text:"رد تلقائي: " + text});
-      }, 500);
+    // تحميل المستخدمين الحقيقيين
+    async function loadUsers() {
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('id, name')
+        .order('name', { ascending: true });
+
+      users.forEach(user => {
+        if(user.id !== currentUserId){ // استبعاد المستخدم الحالي
+          const div = document.createElement('div');
+          div.className = 'user-item';
+          div.innerText = user.name;
+          div.addEventListener('click', () => openChat(user.id, user.name));
+          usersList.appendChild(div);
+        }
+      });
     }
 
-    sendButton.addEventListener('click', () => {
+    // فتح المحادثة وجلب الرسائل من Supabase
+    async function openChat(userId, userName) {
+      selectedUserId = userId;
+      chatWith.innerText = `المحادثة مع ${userName}`;
+      usersScreen.classList.remove('active');
+      chatScreen.classList.add('active');
+      messagesContainer.innerHTML = '';
+
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${currentUserId})`)
+        .order('created_at', { ascending: true });
+
+      messages.forEach(msg => {
+        const sender = (msg.sender_id == currentUserId) ? 'user' : 'bot';
+        showMessage(msg.message, sender);
+      });
+    }
+
+    // إرسال رسالة جديدة وحفظها في Supabase
+    async function sendMessage() {
       const text = messageInput.value.trim();
       if (!text) return;
       showMessage(text, 'user');
-      if (!chats[currentUserId]) chats[currentUserId] = [];
-      chats[currentUserId].push({sender:'user', text});
       messageInput.value = '';
-      botReply(text);
-    });
 
+      await supabase.from('messages').insert([
+        { sender_id: currentUserId, receiver_id: selectedUserId, message: text }
+      ]);
+    }
+
+    sendButton.addEventListener('click', sendMessage);
     messageInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendButton.click();
+      if (e.key === 'Enter') sendMessage();
     });
 
     backButton.addEventListener('click', () => {
       chatScreen.classList.remove('active');
       usersScreen.classList.add('active');
+      messagesContainer.innerHTML = '';
     });
 
+    loadUsers(); // تحميل المستخدمين عند فتح الصفحة
   </script>
+
 </body>
 </html>

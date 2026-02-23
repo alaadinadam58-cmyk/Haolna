@@ -1,8 +1,11 @@
-<!DOCTYPE html><html lang="ar" dir="rtl">
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jamba Chat - كامل</title><style>
+<title>Jamba Chat - كامل</title>
+
+<style>
 body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f2f4f7; display:flex; flex-direction:column; align-items:center; }
 header { width:100%; background:#1a73e8; color:white; padding:15px 20px; font-size:20px; text-align:center; box-shadow:0 2px 5px rgba(0,0,0,0.2); }
 .container { display:flex; max-width:900px; width:100%; margin-top:20px; gap:20px; }
@@ -19,7 +22,8 @@ input { flex:1; padding:10px; border-radius:20px; border:1px solid #ccc; outline
 button#send { padding:10px 20px; border:none; border-radius:20px; background:#1a73e8; color:white; cursor:pointer; transition:0.3s; }
 button#send:hover { background:#1557b0; }
 .sender-name { font-size:10px; font-weight:bold; display:block; margin-bottom:2px; opacity:0.8; }
-</style></head>
+</style>
+</head>
 <body>
 <header>دردشة جامبا</header>
 <div class="container">
@@ -32,7 +36,9 @@ button#send:hover { background:#1557b0; }
       <button id="send">إرسال</button>
     </div>
   </div>
-</div><script type="module">
+</div>
+
+<script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 const supabase = createClient(
@@ -135,5 +141,6 @@ async function init() {
 }
 
 init();
-</script></body>
+</script>
+</body>
 </html>

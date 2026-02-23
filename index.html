@@ -1,36 +1,40 @@
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
+document.addEventListener("DOMContentLoaded", async () => {
+
 const supabase = createClient(
- "https://szjeerdjuyuqyrixqihb.supabase.co",
+  "https://szjeerdjuyuqyrixqihb.supabase.co",
   "sb_publishable_GpdhY2DBLlI0t3VdzXUWOA_dt43iBLx"
 );
 
 let me = null;
 let currentChatId = null;
-let selectedUserId = null;
 
 /* ========================= */
 /* تحميل المستخدم المحفوظ */
 /* ========================= */
 
-window.onload = async () => {
-  const savedId = localStorage.getItem("user_id");
-  if (savedId) {
-    const { data } = await supabase.from("users").select("*").eq("id", savedId).single();
-    if (data) {
-      me = data;
-      document.getElementById("username-area").style.display = "none";
-      loadUsers();
-    }
+const savedId = localStorage.getItem("user_id");
+if (savedId) {
+  const { data } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", savedId)
+    .single();
+
+  if (data) {
+    me = data;
+    document.getElementById("username-area").style.display = "none";
+    loadUsers();
   }
-};
+}
 
 /* ========================= */
-/* حفظ اسم المستخدم */
+/* حفظ الاسم */
 /* ========================= */
 
-document.getElementById("saveName").onclick = async () => {
+document.getElementById("saveName").addEventListener("click", async () => {
   const username = document.getElementById("username").value.trim();
   if (!username) return;
 
@@ -46,7 +50,7 @@ document.getElementById("saveName").onclick = async () => {
   localStorage.setItem("user_id", me.id);
   document.getElementById("username-area").style.display = "none";
   loadUsers();
-};
+});
 
 /* ========================= */
 /* تحميل المستخدمين */
@@ -74,11 +78,11 @@ async function loadUsers() {
 /* ========================= */
 
 async function startChat(user) {
-  selectedUserId = user.id;
-  document.getElementById("chat-header").textContent = "محادثة مع " + user.username;
+  document.getElementById("chat-header").textContent =
+    "محادثة مع " + user.username;
+
   document.getElementById("chat-input-area").style.display = "flex";
 
-  // البحث عن شات موجود
   const { data: chats } = await supabase
     .from("chats")
     .select("*")
@@ -93,6 +97,7 @@ async function startChat(user) {
       .insert({ user1: me.id, user2: user.id })
       .select()
       .single();
+
     currentChatId = newChat.id;
   }
 
@@ -129,6 +134,45 @@ async function loadMessages() {
 /* إرسال رسالة */
 /* ========================= */
 
+document.getElementById("send").addEventListener("click", async () => {
+  const input = document.getElementById("msg");
+  const text = input.value.trim();
+  if (!text || !currentChatId) return;
+
+  await supabase.from("messages").insert({
+    chat_id: currentChatId,
+    sender_id: me.id,
+    text: text
+  });
+
+  input.value = "";
+  loadMessages();
+});
+
+/* ========================= */
+/* التحديث اللحظي */
+/* ========================= */
+
+supabase.channel("realtime")
+  .on(
+    "postgres_changes",
+    { event: "INSERT", schema: "public", table: "messages" },
+    payload => {
+      if (payload.new.chat_id === currentChatId) {
+        loadMessages();
+      }
+    }
+  )
+  .subscribe();
+
+});
+</script>
+
+
+/* ========================= */
+/* إرسال رسالة */
+/* ========================= */
+
 document.getElementById("send").onclick = async () => {
   const input = document.getElementById("msg");
   const text = input.value.trim();
@@ -159,4 +203,5 @@ supabase.channel("realtime")
   .subscribe();
 
 </script>
+
 

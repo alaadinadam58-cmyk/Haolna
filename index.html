@@ -299,20 +299,24 @@ function listenMessages() {
 
 document.getElementById("send").onclick = async () => {
 
-  let t = document.getElementById("msg").value;
+  let input = document.getElementById("msg");
+  let t = input.value.trim();
+
   if (!t || !chatId) return;
 
-  // إظهار فوري
+  // إظهار فوري مضمون
   appendMessage(t, me.id, me.username);
 
-  document.getElementById("msg").value = "";
+  input.value = "";
 
-  await supabase.from("messages").insert({
+  // إرسال للخادم بدون انتظار
+  supabase.from("messages").insert({
     chat_id: chatId,
     sender_id: me.id,
     text: t
   });
 };
+
 
 /* ================= INIT ================= */
 
@@ -323,4 +327,5 @@ await loadUsers();
 
 </body>
 </html>
+
 

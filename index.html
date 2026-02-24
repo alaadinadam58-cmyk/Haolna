@@ -280,24 +280,12 @@ document.getElementById("send").onclick = async () => {
 /* بدء التشغيل */
 await initUser();
 await loadUsers();
-  async function sendMessage() {
-      const input = document.getElementById("message");
-      const text = input.value.trim();
-      if (!text) return;
-
-      await client.from("messages").insert([
-        {
-          text,
-          name: username,
-        },
-      ]);
-
-      input.value = "";
-    }
+  
 </script>
 
 </body>
 </html>
+
 
 
 

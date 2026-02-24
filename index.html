@@ -250,37 +250,45 @@ function listenMessages() {
 
   channel = supabase
     .channel("room-" + chatId)
-    .on("postgres_changes",
+    .on(
+      "postgres_changes",
       {
         event: "INSERT",
         schema: "public",
         table: "messages",
         filter: `chat_id=eq.${chatId}`
       },
-      payload => loadMessages()
+      async (payload) => {
+
+        const msg = payload.new;
+
+        // لا نكرر رسالة المرسل
+        if (msg.sender_id === me.id) return;
+
+        // جلب اسم المرسل
+        const { data } = await supabase
+          .from("users")
+          .select("username")
+          .eq("id", msg.sender_id)
+          .single();
+
+        let box = document.getElementById("messages");
+
+        let div = document.createElement("div");
+        div.textContent = (data?.username || "مستخدم") + ": " + msg.text;
+        div.className = "other";
+
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+      }
     )
     .subscribe();
 }
 
-document.getElementById("send").onclick = async () => {
-  let t = document.getElementById("msg").value;
-  if (!t || !chatId) return;
-
-  await supabase.from("messages").insert({
-    chat_id: chatId,
-    sender_id: me.id,
-    text: t
-  });
-
-  document.getElementById("msg").value = "";
-  await loadMessages();
-};
-
-await initUser();
-await loadUsers();
 </script>
 
 </body>
 </html>
+
 
 

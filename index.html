@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>   دردشة حولنا</title>
+<title>Jamba Chat</title>
 
 <style>
 body {
@@ -136,7 +136,7 @@ header {
 
 <body>
 
-<header>دردشة حولنا</header>
+<header>دردشة جامبا</header>
 
 <!-- المستخدمين بالأعلى -->
 <div id="user-list"></div>
@@ -147,23 +147,7 @@ header {
   <div id="messages"></div>
   <div class="input-area">
     <input id="msg" placeholder="اكتب رسالة..." />
-    document.getElementById("send").onclick = async () => {
-  let t = document.getElementById("msg").value;
-  if (!t || !chatId) return;
-
-  // ✅ إظهار فوري قبل السيرفر
-  appendMessage(t, me.id, me.username);
-
-  document.getElementById("msg").value = "";
-
-  // إدخال في قاعدة البيانات
-  await supabase.from("messages").insert({
-    chat_id: chatId,
-    sender_id: me.id,
-    text: t
-  });
-};
-
+    <button id="send">إرسال</button>
   </div>
 </div>
 
@@ -206,7 +190,7 @@ async function loadUsers() {
     .neq("id", me.id);
 
   let box = document.getElementById("user-list");
-  box.innerHTML = "<h3></h3>";
+  box.innerHTML = "<h3>المستخدمين:</h3>";
 
   data.forEach(u => {
     let b = document.createElement("button");
@@ -289,32 +273,12 @@ document.getElementById("send").onclick = async () => {
   });
 
   document.getElementById("msg").value = "";
-  /* إظهار فوري */
- 
+  await loadMessages();
 };
 
-/* بدء التشغيل */
 await initUser();
 await loadUsers();
-  function appendMessage(text, senderId, senderName) {
-  const box = document.getElementById("messages");
-
-  let div = document.createElement("div");
-  div.textContent = senderName + ": " + text;
-  div.className = senderId === me.id ? "my" : "other";
-
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
-}
-
 </script>
 
 </body>
 </html>
-
-
-
-
-
-
-

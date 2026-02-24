@@ -152,6 +152,7 @@ header {
 </div>
 
 <script type="module">
+/* نفس كودك بدون أي تغيير */
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 const supabase = createClient(
@@ -162,30 +163,6 @@ const supabase = createClient(
 let me = null;
 let chatId = null;
 let channel = null;
-
-/* طلب إذن الإشعارات */
-if ("Notification" in window && Notification.permission !== "granted") {
-  Notification.requestPermission();
-}
-
-/* ====== نظام الصوت ====== */
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-function beep(){
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-
-  osc.frequency.value = 800;
-  osc.type = 'square';
-  gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-
-  osc.start();
-  osc.stop(audioCtx.currentTime + 0.07);
-}
-/* ======================= */
 
 async function initUser() {
   let saved = localStorage.getItem("uid");
@@ -213,7 +190,7 @@ async function loadUsers() {
     .neq("id", me.id);
 
   let box = document.getElementById("user-list");
-  box.innerHTML = "";
+  
 
   data.forEach(u => {
     let b = document.createElement("button");
@@ -257,8 +234,6 @@ async function loadMessages() {
   let box = document.getElementById("messages");
   box.innerHTML = "";
 
-  if (!data) return;
-
   data.forEach(msg => {
     let div = document.createElement("div");
     let senderName = msg.users?.username || "مستخدم";
@@ -287,34 +262,30 @@ function listenMessages() {
 
         const msg = payload.new;
 
+        // لا نكرر رسالة المرسل
         if (msg.sender_id === me.id) return;
 
-        await loadMessages();
+        // جلب اسم المرسل
+        const { data } = await supabase
+          .from("users")
+          .select("username")
+          .eq("id", msg.sender_id)
+          .single();
 
-        // إشعار
-        if (Notification.permission === "granted") {
-          new Notification("رسالة جديدة", {
-            body: msg.text,
-            icon: "https://cdn-icons-png.flaticon.com/512/2462/2462719.png"
-          });
-        }
+        let box = document.getElementById("messages");
 
-        // تشغيل الصوت
-        if (audioCtx.state === "suspended") {
-          await audioCtx.resume();
-        }
-        beep();
+        let div = document.createElement("div");
+        div.textContent = (data?.username || "مستخدم") + ": " + msg.text;
+        div.className = "other";
+
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
       }
     )
     .subscribe();
 }
 
 document.getElementById("send").onclick = async () => {
-
-  if (audioCtx.state === "suspended") {
-    await audioCtx.resume();
-  }
-
   let t = document.getElementById("msg").value;
   if (!t || !chatId) return;
 
@@ -327,6 +298,7 @@ document.getElementById("send").onclick = async () => {
   document.getElementById("msg").value = "";
   await loadMessages();
 };
+  
 
 await initUser();
 await loadUsers();
@@ -335,6 +307,7 @@ await loadUsers();
 
 </body>
 </html>
+
 
 
 

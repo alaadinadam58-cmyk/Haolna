@@ -285,7 +285,19 @@ function listenMessages() {
     .subscribe();
 }
 
+document.getElementById("send").onclick = async () => {
+  let t = document.getElementById("msg").value;
+  if (!t || !chatId) return;
 
+  await supabase.from("messages").insert({
+    chat_id: chatId,
+    sender_id: me.id,
+    text: t
+  });
+
+  document.getElementById("msg").value = "";
+  await loadMessages();
+};
   
 
 await initUser();
@@ -293,6 +305,7 @@ await loadUsers();
 </script>
 </body>
 </html>
+
 
 
 

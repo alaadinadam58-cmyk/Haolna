@@ -152,7 +152,6 @@ header {
 </div>
 
 <script type="module">
-/* نفس كودك بدون أي تغيير */
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 const supabase = createClient(
@@ -163,6 +162,14 @@ const supabase = createClient(
 let me = null;
 let chatId = null;
 let channel = null;
+
+/* طلب إذن الإشعارات */
+if ("Notification" in window && Notification.permission !== "granted") {
+  Notification.requestPermission();
+}
+
+/* صوت تنبيه */
+const notifySound = new Audio("https://actions.google.com/sounds/v1/alarms/notification_simple-02.mp3");
 
 async function initUser() {
   let saved = localStorage.getItem("uid");
@@ -190,7 +197,7 @@ async function loadUsers() {
     .neq("id", me.id);
 
   let box = document.getElementById("user-list");
-  
+  box.innerHTML = "";
 
   data.forEach(u => {
     let b = document.createElement("button");
@@ -234,6 +241,8 @@ async function loadMessages() {
   let box = document.getElementById("messages");
   box.innerHTML = "";
 
+  if (!data) return;
+
   data.forEach(msg => {
     let div = document.createElement("div");
     let senderName = msg.users?.username || "مستخدم";
@@ -258,28 +267,23 @@ function listenMessages() {
         table: "messages",
         filter: `chat_id=eq.${chatId}`
       },
-      // طلب إذن الإشعارات مرة واحدة
-(payload) => {
+      async (payload) => {
 
+        const msg = payload.new;
 
-        // لا نكرر رسالة المرسل
         if (msg.sender_id === me.id) return;
 
-        // جلب اسم المرسل
-        const { data } = await supabase
-          .from("users")
-          .select("username")
-          .eq("id", msg.sender_id)
-          .single();
+        await loadMessages();
 
-        let box = document.getElementById("messages");
+        // إشعار
+        if (Notification.permission === "granted") {
+          new Notification("رسالة جديدة", {
+            body: msg.text,
+            icon: "https://cdn-icons-png.flaticon.com/512/2462/2462719.png"
+          });
+        }
 
-        let div = document.createElement("div");
-        div.textContent = (data?.username || "مستخدم") + ": " + msg.text;
-        div.className = "other";
-
-        box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
+        notifySound.play();
       }
     )
     .subscribe();
@@ -298,21 +302,14 @@ document.getElementById("send").onclick = async () => {
   document.getElementById("msg").value = "";
   await loadMessages();
 };
-  
 
 await initUser();
 await loadUsers();
-  // طلب إذن الإشعارات مرة واحدة
-if ("Notification" in window && Notification.permission !== "granted") {
-  Notification.requestPermission();
-}
-
-// صوت تنبيه
-const notifySound = new Audio("https://actions.google.com/sounds/v1/alarms/notification_simple-02.mp3");
-
 </script>
+
 </body>
 </html>
+
 
 
 

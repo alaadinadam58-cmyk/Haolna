@@ -260,7 +260,32 @@ function listenMessages() {
       },
       async (payload) => {
 
-        const msg = payload.new;
+  const msg = payload.new;
+
+  if (msg.sender_id === me.id) return;
+
+  // جلب اسم المرسل
+  const { data } = await supabase
+    .from("users")
+    .select("username")
+    .eq("id", msg.sender_id)
+    .single();
+
+  // تحديث الرسائل
+  await loadMessages();
+
+  // 🔔 إشعار
+  if (Notification.permission === "granted") {
+    new Notification("رسالة جديدة", {
+      body: data?.username + ": " + msg.text,
+      icon: "https://cdn-icons-png.flaticon.com/512/2462/2462719.png"
+    });
+  }
+
+  // 🔊 صوت
+  notifySound.play();
+}
+
 
         // لا نكرر رسالة المرسل
         if (msg.sender_id === me.id) return;
@@ -302,9 +327,18 @@ document.getElementById("send").onclick = async () => {
 
 await initUser();
 await loadUsers();
+  // طلب إذن الإشعارات مرة واحدة
+if ("Notification" in window && Notification.permission !== "granted") {
+  Notification.requestPermission();
+}
+
+// صوت تنبيه
+const notifySound = new Audio("https://actions.google.com/sounds/v1/alarms/notification_simple-02.mp3");
+
 </script>
 </body>
 </html>
+
 
 
 

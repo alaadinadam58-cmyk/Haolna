@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jamba Chat</title>
+<title> حولنا</title>
 
 <style>
 body {
@@ -136,7 +136,7 @@ header {
 
 <body>
 
-<header>دردشة جامبا</header>
+<header>دردشة حولنا</header>
 
 <!-- المستخدمين بالأعلى -->
 <div id="user-list"></div>
@@ -190,7 +190,7 @@ async function loadUsers() {
     .neq("id", me.id);
 
   let box = document.getElementById("user-list");
-  box.innerHTML = "<h3>المستخدمين:</h3>";
+  
 
   data.forEach(u => {
     let b = document.createElement("button");
@@ -282,3 +282,4 @@ await loadUsers();
 
 </body>
 </html>
+

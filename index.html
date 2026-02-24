@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title> حولنا</title>
+<title>دردشة حولنا</title>
 
 <style>
 body {
@@ -16,7 +16,6 @@ body {
   height:100vh;
 }
 
-/* الهيدر */
 header {
   width:100%;
   background:#1a73e8;
@@ -26,7 +25,6 @@ header {
   text-align:center;
 }
 
-/* المستخدمين في الأعلى */
 #user-list {
   width:100%;
   background:white;
@@ -56,7 +54,6 @@ header {
   background:#cfd3d8;
 }
 
-/* لوحة الدردشة */
 .chat-panel {
   flex:1;
   display:flex;
@@ -64,13 +61,11 @@ header {
   padding:15px;
 }
 
-/* عنوان الدردشة */
 #chat-header {
   font-size:18px;
   margin-bottom:10px;
 }
 
-/* الرسائل */
 #messages {
   flex:1;
   overflow-y:auto;
@@ -83,7 +78,6 @@ header {
   font-size:16px;
 }
 
-/* شكل الرسائل */
 .my {
   background:#0084ff;
   color:white;
@@ -102,7 +96,6 @@ header {
   max-width:70%;
 }
 
-/* منطقة الإدخال */
 .input-area {
   display:flex;
   padding:10px;
@@ -138,10 +131,8 @@ header {
 
 <header>دردشة حولنا</header>
 
-<!-- المستخدمين بالأعلى -->
 <div id="user-list"></div>
 
-<!-- الدردشة بالأسفل أكبر -->
 <div class="chat-panel">
   <h3 id="chat-header">اختر مستخدم لبدء المحادثة</h3>
   <div id="messages"></div>
@@ -152,7 +143,6 @@ header {
 </div>
 
 <script type="module">
-/* نفس كودك بدون أي تغيير */
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 const supabase = createClient(
@@ -164,17 +154,29 @@ let me = null;
 let chatId = null;
 let channel = null;
 
+/* ================= USER ================= */
+
 async function initUser() {
   let saved = localStorage.getItem("uid");
+
   if (saved) {
-    let { data } = await supabase.from("users").select("*").eq("id", saved).single();
-    if (data) { me = data; return; }
+    let { data } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", saved)
+      .single();
+
+    if (data) {
+      me = data;
+      return;
+    }
   }
 
   let name = prompt("اكتب اسمك");
   if (!name) return;
 
-  let { data } = await supabase.from("users")
+  let { data } = await supabase
+    .from("users")
     .insert({ username: name })
     .select()
     .single();
@@ -183,6 +185,8 @@ async function initUser() {
   me = data;
 }
 
+/* ================= USERS LIST ================= */
+
 async function loadUsers() {
   let { data } = await supabase
     .from("users")
@@ -190,7 +194,7 @@ async function loadUsers() {
     .neq("id", me.id);
 
   let box = document.getElementById("user-list");
-  
+  box.innerHTML = "<h3></h3>";
 
   data.forEach(u => {
     let b = document.createElement("button");
@@ -199,6 +203,8 @@ async function loadUsers() {
     box.appendChild(b);
   });
 }
+
+/* ================= OPEN CHAT ================= */
 
 async function openChat(u) {
 
@@ -209,20 +215,25 @@ async function openChat(u) {
     .single();
 
   if (!data) {
-    let res = await supabase.from("chats")
+    let res = await supabase
+      .from("chats")
       .insert({ user1: me.id, user2: u.id })
       .select()
       .single();
+
     data = res.data;
   }
 
   chatId = data.id;
 
-  document.getElementById("chat-header").textContent = "الدردشة مع " + u.username;
+  document.getElementById("chat-header").textContent =
+    "الدردشة مع " + u.username;
 
   await loadMessages();
   listenMessages();
 }
+
+/* ================= LOAD MESSAGES ================= */
 
 async function loadMessages() {
   let { data } = await supabase
@@ -235,51 +246,74 @@ async function loadMessages() {
   box.innerHTML = "";
 
   data.forEach(msg => {
-    let div = document.createElement("div");
-    let senderName = msg.users?.username || "مستخدم";
-    div.textContent = senderName + ": " + msg.text;
-    div.className = msg.sender_id === me.id ? "my" : "other";
-    box.appendChild(div);
+    appendMessage(
+      msg.text,
+      msg.sender_id,
+      msg.users?.username || "مستخدم"
+    );
   });
+}
 
+/* ================= APPEND SINGLE MESSAGE ================= */
+
+function appendMessage(text, senderId, senderName) {
+  const box = document.getElementById("messages");
+
+  let div = document.createElement("div");
+  div.textContent = senderName + ": " + text;
+  div.className = senderId === me.id ? "my" : "other";
+
+  box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
+
+/* ================= REALTIME ================= */
 
 function listenMessages() {
   if (channel) supabase.removeChannel(channel);
 
   channel = supabase
     .channel("room-" + chatId)
-    .on("postgres_changes",
+    .on(
+      "postgres_changes",
       {
         event: "INSERT",
         schema: "public",
         table: "messages",
         filter: `chat_id=eq.${chatId}`
       },
-      payload => loadMessages()
+      payload => {
+        loadMessages();
+      }
     )
     .subscribe();
 }
 
+/* ================= SEND MESSAGE ================= */
+
 document.getElementById("send").onclick = async () => {
+
   let t = document.getElementById("msg").value;
   if (!t || !chatId) return;
+
+  // إظهار فوري
+  appendMessage(t, me.id, me.username);
+
+  document.getElementById("msg").value = "";
 
   await supabase.from("messages").insert({
     chat_id: chatId,
     sender_id: me.id,
     text: t
   });
-
-  document.getElementById("msg").value = "";
-  await loadMessages();
 };
+
+/* ================= INIT ================= */
 
 await initUser();
 await loadUsers();
+
 </script>
 
 </body>
 </html>
-

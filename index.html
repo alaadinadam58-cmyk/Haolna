@@ -259,13 +259,19 @@ async function loadMessages() {
 function appendMessage(text, senderId, senderName) {
   const box = document.getElementById("messages");
 
+  if (!box) return;
+
   let div = document.createElement("div");
-  div.textContent = senderName + ": " + text;
+
+  const safeName = senderName || (senderId === me.id ? me.username : "مستخدم");
+
+  div.textContent = safeName + ": " + text;
   div.className = senderId === me.id ? "my" : "other";
 
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
+
 
 /* ================= REALTIME ================= */
 
@@ -317,3 +323,4 @@ await loadUsers();
 
 </body>
 </html>
+

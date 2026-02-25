@@ -310,9 +310,6 @@ function listenMessages() {
     .subscribe();
 }
 
-        // لا نكرر رسالة المرسل
-        if (msg.sender_id === me.id) return;
-
         // جلب اسم المرسل
         const { data } = await supabase
           .from("users")
@@ -353,6 +350,7 @@ await loadUsers();
 </script>
 </body>
 </html>
+
 
 
 

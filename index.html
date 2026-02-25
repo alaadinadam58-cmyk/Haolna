@@ -306,10 +306,10 @@ async function loadMessages() {
     box.appendChild(div);
   });
 
-
-}
-
+  // هذا السطر يجب أن يكون داخل الدالة
   box.scrollTop = box.scrollHeight;
+
+
 }
 function showToast(message) {
   const toast = document.createElement("div");
@@ -415,6 +415,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

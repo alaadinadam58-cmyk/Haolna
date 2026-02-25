@@ -273,22 +273,41 @@ async function openChat(u) {
 }
 
 async function loadMessages() {
-  let { data } = await supabase
+
+  let { data, error } = await supabase
     .from("messages")
-    .select("text, sender_id, users(username)")
+    .select(`
+      text,
+      sender_id,
+      sender:sender_id ( username )
+    `)
     .eq("chat_id", chatId)
     .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error(error);
+    return;
+  }
 
   let box = document.getElementById("messages");
   box.innerHTML = "";
 
   data.forEach(msg => {
+
     let div = document.createElement("div");
-    let senderName = msg.users?.username || "مستخدم";
+
+    let senderName = msg.sender?.username || "مستخدم";
+
     div.textContent = senderName + ": " + msg.text;
-    div.className = msg.sender_id === me.id ? "my" : "other";
+
+    div.className =
+      msg.sender_id === me.id ? "my" : "other";
+
     box.appendChild(div);
   });
+
+  box.scrollTop = box.scrollHeight;
+}
 
   box.scrollTop = box.scrollHeight;
 }
@@ -396,6 +415,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

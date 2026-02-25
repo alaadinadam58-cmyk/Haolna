@@ -300,35 +300,26 @@ function listenMessages() {
   if (channel) supabase.removeChannel(channel);
 
   channel = supabase
-    .channel("room-" + chatId)
+    .channel("all-my-messages")
     .on(
       "postgres_changes",
       {
         event: "INSERT",
         schema: "public",
-        table: "messages",
-        filter: `chat_id=eq.${chatId}`
+        table: "messages"
       },
       async (payload) => {
 
-  const msg = payload.new;
+        const msg = payload.new;
 
-  if (msg.sender_id === me.id) return;
+        // تجاهل رسائلي أنا
+        if (msg.sender_id === me.id) return;
 
-  // لو الشات الحالي غير مفتوح
-  if (!chatId || msg.chat_id !== chatId) {
+        // إذا الرسالة ليست في الشات المفتوح
+        if (msg.chat_id !== chatId) {
 
-    unreadCounts[msg.sender_id] = 
-      (unreadCounts[msg.sender_id] || 0) + 1;
+          // لازم نعرف من هو الم
 
-    loadUsers(); // تحديث الأزرار
-  }
-
-  await loadMessages();
-}
-
-    )
-    .subscribe();
 
 
 }
@@ -353,6 +344,7 @@ await loadUsers();
 </script>
 </body>
 </html>
+
 
 
 

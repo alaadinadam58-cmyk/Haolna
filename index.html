@@ -174,6 +174,8 @@ header {
 </div>
 
 <script type="module">
+  let unreadCounts = {};
+
 /* نفس كودك بدون أي تغيير */
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
@@ -215,11 +217,22 @@ async function loadUsers() {
   
 
   data.forEach(u => {
-    let b = document.createElement("button");
-    b.textContent = u.username;
-    b.onclick = () => openChat(u);
-    box.appendChild(b);
-  });
+  let b = document.createElement("button");
+  b.id = "user-" + u.id;
+
+  let count = unreadCounts[u.id] || 0;
+  b.textContent = count > 0 
+      ? u.username + " 🔴 (" + count + ")" 
+      : u.username;
+
+  b.onclick = () => {
+    unreadCounts[u.id] = 0; // تصفير عند الفتح
+    openChat(u);
+    loadUsers(); // تحديث الشكل
+  };
+
+  box.appendChild(b);
+});
 }
 
 async function openChat(u) {
@@ -298,15 +311,22 @@ function listenMessages() {
       },
       async (payload) => {
 
-        const msg = payload.new;
+  const msg = payload.new;
 
-        // لا نكرر رسالة المرسل
-        if (msg.sender_id === me.id) return;
+  if (msg.sender_id === me.id) return;
 
-        await loadMessages();
+  // لو الشات الحالي غير مفتوح
+  if (!chatId || msg.chat_id !== chatId) {
 
-        showToast("رسالة جديدة: " + msg.text);
-      }
+    unreadCounts[msg.sender_id] = 
+      (unreadCounts[msg.sender_id] || 0) + 1;
+
+    loadUsers(); // تحديث الأزرار
+  }
+
+  await loadMessages();
+}
+
     )
     .subscribe();
 
@@ -333,6 +353,7 @@ await loadUsers();
 </script>
 </body>
 </html>
+
 
 
 

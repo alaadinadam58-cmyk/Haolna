@@ -152,6 +152,10 @@ header {
   opacity: 1;
   transform: translateY(0);
 }
+.unread-badge {
+  color: red;
+  font-weight: bold;
+}
 
 </style>
 </head>
@@ -214,8 +218,6 @@ async function loadUsers() {
     .neq("id", me.id);
 
   let box = document.getElementById("user-list");
-
-  // 🔥 مهم جداً — امسح القديم أولاً
   box.innerHTML = "";
 
   data.forEach(u => {
@@ -224,9 +226,14 @@ async function loadUsers() {
 
     let count = unreadCounts[u.id] || 0;
 
-    b.textContent = count > 0 
-      ? u.username + " 🔴 (" + count + ")" 
-      : u.username;
+    if (count > 0) {
+      b.innerHTML = `
+        ${u.username} 
+        <span class="unread-badge">(${count})</span>
+      `;
+    } else {
+      b.textContent = u.username;
+    }
 
     b.onclick = () => {
       unreadCounts[u.id] = 0;
@@ -236,6 +243,7 @@ async function loadUsers() {
 
     box.appendChild(b);
   });
+
 }
 
 
@@ -376,6 +384,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

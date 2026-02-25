@@ -297,13 +297,17 @@ function listenMessages() {
       },
       async (payload) => {
 
-  const msg = payload.new;
+        const msg = payload.new;
 
-  if (msg.sender_id === me.id) return;
+        // لا نكرر رسالة المرسل
+        if (msg.sender_id === me.id) return;
 
-  await loadMessages();
+        await loadMessages();
 
-  showToast("رسالة جديدة: " + msg.text);
+        showToast("رسالة جديدة: " + msg.text);
+      }
+    )
+    .subscribe();
 }
 
         // لا نكرر رسالة المرسل
@@ -349,6 +353,7 @@ await loadUsers();
 </script>
 </body>
 </html>
+
 
 
 

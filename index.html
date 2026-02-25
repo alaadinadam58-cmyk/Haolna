@@ -214,26 +214,31 @@ async function loadUsers() {
     .neq("id", me.id);
 
   let box = document.getElementById("user-list");
-  
+
+  // 🔥 مهم جداً — امسح القديم أولاً
+  box.innerHTML = "";
 
   data.forEach(u => {
-  let b = document.createElement("button");
-  b.id = "user-" + u.id;
+    let b = document.createElement("button");
+    b.id = "user-" + u.id;
 
-  let count = unreadCounts[u.id] || 0;
-  b.textContent = count > 0 
+    let count = unreadCounts[u.id] || 0;
+
+    b.textContent = count > 0 
       ? u.username + " 🔴 (" + count + ")" 
       : u.username;
 
-  b.onclick = () => {
-    unreadCounts[u.id] = 0; // تصفير عند الفتح
-    openChat(u);
-    loadUsers(); // تحديث الشكل
-  };
+    b.onclick = () => {
+      unreadCounts[u.id] = 0;
+      openChat(u);
+      loadUsers();
+    };
 
-  box.appendChild(b);
-});
+    box.appendChild(b);
+  });
 }
+
+
 
 async function openChat(u) {
 
@@ -371,6 +376,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

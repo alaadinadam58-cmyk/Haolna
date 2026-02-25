@@ -320,8 +320,31 @@ function listenMessages() {
 
           // لازم نعرف من هو الم
 
+async (payload) => {
 
+        const msg = payload.new;
 
+        // لا نكرر رسالة المرسل
+        if (msg.sender_id === me.id) return;
+
+        // جلب اسم المرسل
+        const { data } = await supabase
+          .from("users")
+          .select("username")
+          .eq("id", msg.sender_id)
+          .single();
+
+        let box = document.getElementById("messages");
+
+        let div = document.createElement("div");
+        div.textContent = (data?.username || "مستخدم") + ": " + msg.text;
+        div.className = "other";
+
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+      }
+    )
+    .subscribe();
 }
 
 document.getElementById("send").onclick = async () => {
@@ -344,6 +367,7 @@ await loadUsers();
 </script>
 </body>
 </html>
+
 
 
 

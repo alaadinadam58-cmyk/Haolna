@@ -109,6 +109,27 @@ header {
   background:white;
   border-top:1px solid #ddd;
 }
+/* إشعار مرئي */
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #1a73e8;
+  color: white;
+  padding: 12px 18px;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  font-size: 14px;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: all 0.3s ease;
+  z-index: 9999;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
 
 #msg {
   flex:1;
@@ -244,6 +265,22 @@ async function loadMessages() {
 
   box.scrollTop = box.scrollHeight;
 }
+function showToast(message) {
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  toast.textContent = message;
+
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add("show");
+  }, 100);
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
 
 function listenMessages() {
   if (channel) supabase.removeChannel(channel);
@@ -260,7 +297,14 @@ function listenMessages() {
       },
       async (payload) => {
 
-        const msg = payload.new;
+  const msg = payload.new;
+
+  if (msg.sender_id === me.id) return;
+
+  await loadMessages();
+
+  showToast("رسالة جديدة: " + msg.text);
+}
 
         // لا نكرر رسالة المرسل
         if (msg.sender_id === me.id) return;
@@ -305,6 +349,7 @@ await loadUsers();
 </script>
 </body>
 </html>
+
 
 
 

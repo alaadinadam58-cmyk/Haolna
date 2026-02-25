@@ -256,7 +256,7 @@ async function openChat(u) {
   document.getElementById("chat-header").textContent = "الدردشة مع " + u.username;
 
   await loadMessages();
-  listenMessages();
+ 
 }
 
 async function loadMessages() {
@@ -297,10 +297,11 @@ function showToast(message) {
 }
 
 function listenMessages() {
+
   if (channel) supabase.removeChannel(channel);
 
   channel = supabase
-    .channel("all-my-messages")
+    .channel("all-messages")
     .on(
       "postgres_changes",
       {
@@ -315,19 +316,18 @@ function listenMessages() {
         // تجاهل رسائلي أنا
         if (msg.sender_id === me.id) return;
 
-        // إذا الرسالة ليست في الشات المفتوح
+        // إذا الرسالة ليست في الشات المفتوح → زد العداد
         if (msg.chat_id !== chatId) {
 
-          // لازم نعرف من هو الم
+          unreadCounts[msg.sender_id] =
+            (unreadCounts[msg.sender_id] || 0) + 1;
 
-async (payload) => {
+          loadUsers();
 
-        const msg = payload.new;
+          return;
+        }
 
-        // لا نكرر رسالة المرسل
-        if (msg.sender_id === me.id) return;
-
-        // جلب اسم المرسل
+        // إذا الرسالة في الشات المفتوح → أضفها مباشرة
         const { data } = await supabase
           .from("users")
           .select("username")
@@ -347,6 +347,8 @@ async (payload) => {
     .subscribe();
 }
 
+
+
 document.getElementById("send").onclick = async () => {
   let t = document.getElementById("msg").value;
   if (!t || !chatId) return;
@@ -364,9 +366,12 @@ document.getElementById("send").onclick = async () => {
 
 await initUser();
 await loadUsers();
+listenMessages();
+
 </script>
 </body>
 </html>
+
 
 
 

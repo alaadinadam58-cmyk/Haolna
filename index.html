@@ -311,36 +311,36 @@ function showToast(message) {
 
 function listenMessages() {
 
-  if (channel) supabase.removeChannel(channel);
+  if (channel) {
+    supabase.removeChannel(channel);
+    channel = null;
+  }
 
   channel = supabase
-    .channel("all-messages")
+    .channel("my-incoming-messages")
     .on(
       "postgres_changes",
       {
         event: "INSERT",
         schema: "public",
-        table: "messages"
+        table: "messages",
+        filter: `receiver_id=eq.${me.id}`
       },
       async (payload) => {
 
         const msg = payload.new;
 
-        // تجاهل رسائلي أنا
-        if (msg.sender_id === me.id) return;
-
-        // إذا الرسالة ليست في الشات المفتوح → زد العداد
+        // إذا الرسالة ليست في الشات المفتوح → عداد
         if (msg.chat_id !== chatId) {
 
           unreadCounts[msg.sender_id] =
             (unreadCounts[msg.sender_id] || 0) + 1;
 
           loadUsers();
-
           return;
         }
 
-        // إذا الرسالة في الشات المفتوح → أضفها مباشرة
+        // عرض مباشر
         const { data } = await supabase
           .from("users")
           .select("username")
@@ -362,19 +362,31 @@ function listenMessages() {
 
 
 
+
 document.getElementById("send").onclick = async () => {
   let t = document.getElementById("msg").value;
   if (!t || !chatId) return;
 
+  // معرفة المستخدم الآخر في الشات
+  const { data: chat } = await supabase
+    .from("chats")
+    .select("user1, user2")
+    .eq("id", chatId)
+    .single();
+
+  let receiverId =
+    chat.user1 === me.id ? chat.user2 : chat.user1;
+
   await supabase.from("messages").insert({
     chat_id: chatId,
     sender_id: me.id,
+    receiver_id: receiverId,
     text: t
   });
 
   document.getElementById("msg").value = "";
-  await loadMessages();
 };
+
   
 
 await initUser();
@@ -384,6 +396,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

@@ -332,11 +332,10 @@ function listenMessages() {
 
   if (channel) {
     supabase.removeChannel(channel);
-    channel = null;
   }
 
   channel = supabase
-    .channel("my-incoming-messages")
+    .channel("incoming")
     .on(
       "postgres_changes",
       {
@@ -349,7 +348,7 @@ function listenMessages() {
 
         const msg = payload.new;
 
-        // إذا الرسالة ليست في الشات المفتوح → عداد
+        // إذا الرسالة في شات آخر
         if (msg.chat_id !== chatId) {
 
           unreadCounts[msg.sender_id] =
@@ -369,7 +368,7 @@ function listenMessages() {
         let box = document.getElementById("messages");
 
         let div = document.createElement("div");
-        div.textContent = (data?.username || "مستخدم") + ": " + msg.text;
+        div.textContent = data.username + ": " + msg.text;
         div.className = "other";
 
         box.appendChild(div);
@@ -382,11 +381,12 @@ function listenMessages() {
 
 
 
+
 document.getElementById("send").onclick = async () => {
-  let t = document.getElementById("msg").value;
+
+  let t = document.getElementById("msg").value.trim();
   if (!t || !chatId) return;
 
-  // معرفة المستخدم الآخر في الشات
   const { data: chat } = await supabase
     .from("chats")
     .select("user1, user2")
@@ -396,12 +396,39 @@ document.getElementById("send").onclick = async () => {
   let receiverId =
     chat.user1 === me.id ? chat.user2 : chat.user1;
 
-  await supabase.from("messages").insert({
-    chat_id: chatId,
-    sender_id: me.id,
-    receiver_id: receiverId,
-    text: t
-  });
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({
+      chat_id: chatId,
+      sender_id: me.id,
+      receiver_id: receiverId,
+      text: t
+    })
+    .select(`
+      text,
+      sender_id,
+      sender:sender_id ( username )
+    `)
+    .single();
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  // 🔥 عرض الرسالة فوراً محلياً
+  let box = document.getElementById("messages");
+
+  let div = document.createElement("div");
+  div.textContent = data.sender.username + ": " + data.text;
+  div.className = "my";
+
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+
+  document.getElementById("msg").value = "";
+};
+
 
   document.getElementById("msg").value = "";
 };
@@ -415,6 +442,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

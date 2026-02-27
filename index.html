@@ -274,7 +274,7 @@ async function openChat(u) {
   chatId = data.id;
 
   document.getElementById("chat-header").textContent = "الدردشة مع " + u.username;
-
+await loadMessages();
   
 
   await supabase
@@ -432,6 +432,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

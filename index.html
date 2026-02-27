@@ -178,7 +178,9 @@ header {
 </div>
 
 <script type="module">
+  let unreadCounts = {};
 
+/* نفس كودك بدون أي تغيير */
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 const supabase = createClient(
@@ -190,12 +192,8 @@ let me = null;
 let chatId = null;
 let channel = null;
 
-/* =========================
-   تسجيل المستخدم
-========================= */
 async function initUser() {
   let saved = localStorage.getItem("uid");
-
   if (saved) {
     let { data } = await supabase.from("users").select("*").eq("id", saved).single();
     if (data) { me = data; return; }
@@ -204,8 +202,7 @@ async function initUser() {
   let name = prompt("اكتب اسمك");
   if (!name) return;
 
-  let { data } = await supabase
-    .from("users")
+  let { data } = await supabase.from("users")
     .insert({ username: name })
     .select()
     .single();
@@ -214,9 +211,6 @@ async function initUser() {
   me = data;
 }
 
-/* =========================
-   تحميل المستخدمين
-========================= */
 async function loadUsers() {
 
   let { data: users } = await supabase
@@ -229,6 +223,7 @@ async function loadUsers() {
 
   for (let u of users) {
 
+    // حساب عدد الرسائل غير المقروءة من هذا المستخدم
     const { count } = await supabase
       .from("messages")
       .select("*", { count: "exact", head: true })
@@ -237,22 +232,29 @@ async function loadUsers() {
       .eq("is_read", false);
 
     let b = document.createElement("button");
+    b.id = "user-" + u.id;
 
     if (count > 0) {
-      b.innerHTML = `${u.username} <span style="color:red">(${count})</span>`;
+      b.innerHTML = `
+        ${u.username}
+        <span class="unread-badge">(${count})</span>
+      `;
     } else {
       b.textContent = u.username;
     }
 
-    b.onclick = () => openChat(u);
+    b.onclick = async () => {
+      await openChat(u);
+    };
 
     box.appendChild(b);
   }
 }
 
-/* =========================
-   فتح محادثة
-========================= */
+
+
+
+
 async function openChat(u) {
 
   let { data } = await supabase
@@ -262,12 +264,10 @@ async function openChat(u) {
     .single();
 
   if (!data) {
-    let res = await supabase
-      .from("chats")
+    let res = await supabase.from("chats")
       .insert({ user1: me.id, user2: u.id })
       .select()
       .single();
-
     data = res.data;
   }
 
@@ -276,22 +276,24 @@ async function openChat(u) {
   document.getElementById("chat-header").textContent = "الدردشة مع " + u.username;
 
   await loadMessages();
+  // تحديث الرسائل كمقروءة
+await supabase
+  .from("messages")
+  .update({ is_read: true })
+  .eq("sender_id", u.id)
+  .eq("receiver_id", me.id)
+  .eq("chat_id", chatId)
+  .eq("is_read", false);
 
-  await supabase
-    .from("messages")
-    .update({ is_read: true })
-    .eq("chat_id", chatId)
-    .eq("receiver_id", me.id);
+// تحديث القائمة لإزالة العداد
+loadUsers();
 
-  loadUsers();
+ 
 }
 
-/* =========================
-   تحميل الرسائل
-========================= */
 async function loadMessages() {
 
-  let { data } = await supabase
+  let { data, error } = await supabase
     .from("messages")
     .select(`
       id,
@@ -302,30 +304,48 @@ async function loadMessages() {
     .eq("chat_id", chatId)
     .order("created_at", { ascending: true });
 
+  if (error) {
+    console.error(error);
+    return;
+  }
+
   let box = document.getElementById("messages");
   box.innerHTML = "";
 
   data.forEach(msg => {
 
     let div = document.createElement("div");
-    div.id = "msg-" + msg.id;
+    div.id = "msg-" + msg.id; // مهم للحذف الفوري
 
+    div.className =
+      msg.sender_id === me.id ? "my" : "other";
+
+    let senderName =
+      msg.sender?.username || "مستخدم";
+
+    div.innerHTML =
+      senderName + ": " + msg.text;
+
+    // زر حذف لرسائلي فقط
     if (msg.sender_id === me.id) {
-      div.className = "my";
-      div.textContent = msg.text;
 
-      let del = document.createElement("button");
-      del.textContent = "🗑";
-      del.style.marginRight = "6px";
-      del.onclick = async () => {
-        await supabase.from("messages").delete().eq("id", msg.id);
+      let delBtn = document.createElement("button");
+      delBtn.textContent = "🗑";
+      delBtn.style.marginRight = "8px";
+      delBtn.style.border = "none";
+      delBtn.style.background = "transparent";
+      delBtn.style.cursor = "pointer";
+
+      delBtn.onclick = async () => {
+
+        await supabase
+          .from("messages")
+          .delete()
+          .eq("id", msg.id);
+
       };
 
-      div.appendChild(del);
-
-    } else {
-      div.className = "other";
-      div.textContent = msg.sender?.username + ": " + msg.text;
+      div.appendChild(delBtn);
     }
 
     box.appendChild(div);
@@ -334,19 +354,24 @@ async function loadMessages() {
   box.scrollTop = box.scrollHeight;
 }
 
-/* =========================
-   الاستماع الفوري
-========================= */
+
 function listenMessages() {
 
-  if (channel) supabase.removeChannel(channel);
+  if (channel) {
+    supabase.removeChannel(channel);
+  }
 
   channel = supabase
-    .channel("realtime-messages")
+    .channel('messages-channel')
 
+    // عند إضافة رسالة
     .on(
-      "postgres_changes",
-      { event: "INSERT", schema: "public", table: "messages" },
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages'
+      },
       async (payload) => {
 
         const msg = payload.new;
@@ -354,37 +379,45 @@ function listenMessages() {
         if (msg.sender_id === me.id) return;
 
         if (msg.chat_id !== chatId) {
+          unreadCounts[msg.sender_id] =
+            (unreadCounts[msg.sender_id] || 0) + 1;
+
           loadUsers();
           return;
         }
-
-        if (document.getElementById("msg-" + msg.id)) return;
 
         await loadMessages();
       }
     )
 
+    // عند حذف رسالة
     .on(
-      "postgres_changes",
-      { event: "DELETE", schema: "public", table: "messages" },
+      'postgres_changes',
+      {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'messages'
+      },
       (payload) => {
-        let el = document.getElementById("msg-" + payload.old.id);
-        if (el) el.remove();
+
+        const deletedId = payload.old.id;
+        const msgElement = document.getElementById("msg-" + deletedId);
+
+        if (msgElement) {
+          msgElement.remove(); // 🔥 حذف فوري بدون تحديث
+        }
       }
     )
 
-    .subscribe();
+    .subscribe(); // ✅ مهم جداً
+
 }
 
-/* =========================
-   إرسال رسالة
-========================= */
-async function sendMessage() {
 
-  let input = document.getElementById("msg");
-  let text = input.value.trim();
+document.getElementById("send").onclick = async () => {
 
-  if (!text || !chatId) return;
+  let t = document.getElementById("msg").value.trim();
+  if (!t || !chatId) return;
 
   const { data: chat } = await supabase
     .from("chats")
@@ -392,46 +425,142 @@ async function sendMessage() {
     .eq("id", chatId)
     .single();
 
-  let receiverId = chat.user1 === me.id ? chat.user2 : chat.user1;
+  let receiverId =
+    chat.user1 === me.id ? chat.user2 : chat.user1;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("messages")
     .insert({
       chat_id: chatId,
       sender_id: me.id,
       receiver_id: receiverId,
-      text: text,
-      is_read: false
+      text: t
     })
-    .select()
+    .select(`
+      text,
+      sender_id,
+      sender:sender_id ( username )
+    `)
     .single();
 
-  input.value = "";
+  if (error) {
+    console.error(error);
+    return;
+  }
 
-  await loadMessages();
-}
+  
+};
 
-/* =========================
-   ربط الأزرار
-========================= */
-document.getElementById("send").addEventListener("click", sendMessage);
 
-document.getElementById("msg").addEventListener("keypress", e => {
-  if (e.key === "Enter") sendMessage();
-});
+  
 
-/* =========================
-   تشغيل التطبيق
-========================= */
 await initUser();
 await loadUsers();
 listenMessages();
+setupSendButton(); // 🔥 مهم جداً
 
+function setupSendButton() {
 
+  const sendBtn = document.getElementById("send");
+  const msgInput = document.getElementById("msg");
+
+  async function sendMessage() {
+
+    let t = msgInput.value.trim();
+    if (!t) return;
+
+    if (!chatId) {
+      alert("اختر مستخدم أولاً");
+      return;
+    }
+
+    try {
+
+      // جلب بيانات الشات لمعرفة المستقبل
+      const { data: chat, error: chatError } = await supabase
+        .from("chats")
+        .select("user1, user2")
+        .eq("id", chatId)
+        .single();
+
+      if (chatError) {
+        console.error(chatError);
+        return;
+      }
+
+      let receiverId =
+        chat.user1 === me.id ? chat.user2 : chat.user1;
+
+      // إدخال الرسالة
+      const { data, error } = await supabase
+        .from("messages")
+        .insert({
+          chat_id: chatId,
+          sender_id: me.id,
+          receiver_id: receiverId,
+          text: t,
+          is_read: false
+        })
+        .select(`
+          id,
+          text,
+          sender_id,
+          sender:sender_id ( username )
+        `)
+        .single();
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      // 🔥 عرض الرسالة فوراً محلياً
+      let box = document.getElementById("messages");
+
+      let div = document.createElement("div");
+      div.id = "msg-" + data.id;
+      div.className = "my";
+      div.textContent = "  " + data.text;
+
+      // زر حذف
+      let delBtn = document.createElement("button");
+      delBtn.textContent = "🗑";
+      delBtn.style.marginRight = "8px";
+      delBtn.style.border = "none";
+      delBtn.style.background = "transparent";
+      delBtn.style.cursor = "pointer";
+
+      delBtn.onclick = async () => {
+        await supabase
+          .from("messages")
+          .delete()
+          .eq("id", data.id);
+      };
+
+      div.appendChild(delBtn);
+
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+
+      msgInput.value = "";
+
+    } catch (err) {
+      console.error("Send Error:", err);
+    }
+  }
+
+  // ربط زر الإرسال
+  sendBtn.addEventListener("click", sendMessage);
+
+  // الإرسال عند الضغط Enter
+  msgInput.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      sendMessage();
+    }
+  });
+}
 
 </script>
 </body>
 </html>
-
-
 

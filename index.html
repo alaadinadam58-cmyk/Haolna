@@ -448,18 +448,7 @@ document.getElementById("send").onclick = async () => {
     return;
   }
 
-  // 🔥 عرض الرسالة فوراً محلياً
-  let box = document.getElementById("messages");
-
-  let div = document.createElement("div");
-  div.textContent = data.sender.username + ": " + data.text;
-  div.className = "my";
-
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
-
-  document.getElementById("msg").value = "";
-};
+  
 
 
   
@@ -529,7 +518,7 @@ function setupSendButton() {
 
       let div = document.createElement("div");
       div.id = "msg-" + data.id;
-     
+      div.className = "my";
       div.textContent = "أنا: " + data.text;
 
       // زر حذف
@@ -573,37 +562,6 @@ function setupSendButton() {
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -481,6 +481,18 @@ listenMessages();
           .delete()
           .eq("id", data.id);
       };
+
+      div.appendChild(delBtn);
+
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+
+      msgInput.value = "";
+
+    } catch (err) {
+      console.error("Send Error:", err);
+    }
+  }
 setupSendButton(); // 🔥 مهم جداً
 
 function setupSendButton() {
@@ -546,7 +558,20 @@ function setupSendButton() {
       div.className = "my";
       div.textContent = "أنا: " + data.text;
 
-      
+      // زر حذف
+      let delBtn = document.createElement("button");
+      delBtn.textContent = "🗑";
+      delBtn.style.marginRight = "8px";
+      delBtn.style.border = "none";
+      delBtn.style.background = "transparent";
+      delBtn.style.cursor = "pointer";
+
+      delBtn.onclick = async () => {
+        await supabase
+          .from("messages")
+          .delete()
+          .eq("id", data.id);
+      };
 
       div.appendChild(delBtn);
 

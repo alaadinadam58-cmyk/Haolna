@@ -275,7 +275,7 @@ async function openChat(u) {
 
   document.getElementById("chat-header").textContent = "الدردشة مع " + u.username;
 
-  await loadMessages();
+  
   // تحديث الرسائل كمقروءة
 await supabase
   .from("messages")
@@ -366,28 +366,41 @@ function listenMessages() {
 
     // عند إضافة رسالة
     .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages'
-      },
-      async (payload) => {
+  'postgres_changes',
+  {
+    event: 'INSERT',
+    schema: 'public',
+    table: 'messages'
+  },
+  async (payload) => {
 
-        const msg = payload.new;
+    const msg = payload.new;
 
-        if (msg.sender_id === me.id) return;
+    // لا تعرض رسالتي أنا
+    if (msg.sender_id === me.id) return;
 
-        if (msg.chat_id !== chatId) {
-          unreadCounts[msg.sender_id] =
-            (unreadCounts[msg.sender_id] || 0) + 1;
+    // إذا ليست المحادثة المفتوحة
+    if (msg.chat_id !== chatId) {
+      loadUsers();
+      return;
+    }
 
-          loadUsers();
-          return;
-        }
+    // 🔥 منع التكرار
+    if (document.getElementById("msg-" + msg.id)) return;
 
-        await loadMessages();
-      }
+    // عرض الرسالة مباشرة بدون loadMessages
+    let box = document.getElementById("messages");
+
+    let div = document.createElement("div");
+    div.id = "msg-" + msg.id;
+    div.className = "other";
+    div.textContent = msg.text;
+
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+  }
+)
+
     )
 
     // عند حذف رسالة
@@ -563,5 +576,6 @@ function setupSendButton() {
 </script>
 </body>
 </html>
+
 
 

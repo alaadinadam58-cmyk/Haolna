@@ -379,6 +379,8 @@ function listenMessages() {
 
   channel = supabase
     .channel('messages-channel')
+    
+    // عند إضافة رسالة
     .on(
       'postgres_changes',
       {
@@ -390,12 +392,9 @@ function listenMessages() {
 
         const msg = payload.new;
 
-        // تجاهل رسائلي أنا
         if (msg.sender_id === me.id) return;
 
-        // لو ليست في نفس الشات → عداد
         if (msg.chat_id !== chatId) {
-
           unreadCounts[msg.sender_id] =
             (unreadCounts[msg.sender_id] || 0) + 1;
 
@@ -403,10 +402,11 @@ function listenMessages() {
           return;
         }
 
-        // تحميل الرسائل مباشرة
         await loadMessages();
       }
     )
+
+    // عند حذف رسالة
     .on(
       'postgres_changes',
       {
@@ -414,10 +414,17 @@ function listenMessages() {
         schema: 'public',
         table: 'messages'
       },
-      async () => {
-        await loadMessages();
+      async (payload) => {
+
+        const msg = payload.old;
+
+        // إذا الحذف في نفس الشات
+        if (msg.chat_id === chatId) {
+          await loadMessages();
+        }
       }
     )
+
     .subscribe();
 }
 
@@ -483,6 +490,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

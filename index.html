@@ -296,6 +296,7 @@ async function loadMessages() {
   let { data, error } = await supabase
     .from("messages")
     .select(`
+      id,
       text,
       sender_id,
       sender:sender_id ( username )
@@ -314,22 +315,45 @@ async function loadMessages() {
   data.forEach(msg => {
 
     let div = document.createElement("div");
+    div.className =
+      msg.sender_id === me.id ? "my" : "other";
 
     let senderName = msg.sender?.username || "مستخدم";
 
-    div.textContent = senderName + ": " + msg.text;
+    div.innerHTML = `
+      <span>${senderName}: ${msg.text}</span>
+    `;
 
-    div.className =
-      msg.sender_id === me.id ? "my" : "other";
+    // زر حذف فقط لرسائلي أنا
+    if (msg.sender_id === me.id) {
+
+      let delBtn = document.createElement("button");
+      delBtn.textContent = "🗑";
+      delBtn.style.marginRight = "8px";
+      delBtn.style.border = "none";
+      delBtn.style.background = "transparent";
+      delBtn.style.cursor = "pointer";
+
+      delBtn.onclick = async () => {
+        if (!confirm("هل تريد حذف الرسالة؟")) return;
+
+        await supabase
+          .from("messages")
+          .delete()
+          .eq("id", msg.id);
+
+        await loadMessages();
+      };
+
+      div.appendChild(delBtn);
+    }
 
     box.appendChild(div);
   });
 
-  // هذا السطر يجب أن يكون داخل الدالة
   box.scrollTop = box.scrollHeight;
-
-
 }
+
 function showToast(message) {
   const toast = document.createElement("div");
   toast.className = "toast";
@@ -356,13 +380,7 @@ function listenMessages() {
   channel = supabase
     .channel("incoming")
     .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "messages",
-        filter: `receiver_id=eq.${me.id}`
-      },
+
       async (payload) => {
 
         const msg = payload.new;
@@ -458,6 +476,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

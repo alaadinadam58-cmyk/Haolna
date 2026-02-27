@@ -468,6 +468,32 @@ await initUser();
 await loadUsers();
 listenMessages();
 setupSendButton(); // 🔥 مهم جداً
+ // زر حذف
+      let delBtn = document.createElement("button");
+      delBtn.textContent = "🗑";
+      delBtn.style.marginRight = "8px";
+      delBtn.style.border = "none";
+      delBtn.style.background = "transparent";
+      delBtn.style.cursor = "pointer";
+
+      delBtn.onclick = async () => {
+        await supabase
+          .from("messages")
+          .delete()
+          .eq("id", data.id);
+      };
+
+      div.appendChild(delBtn);
+
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+
+      msgInput.value = "";
+
+    } catch (err) {
+      console.error("Send Error:", err);
+    }
+  }
 
 function setupSendButton() {
 
@@ -573,4 +599,5 @@ function setupSendButton() {
 </script>
 </body>
 </html>
+
 

@@ -357,7 +357,6 @@ async function loadMessages() {
 
 function listenMessages() {
 
-  // لو في قناة قديمة نحذفها
   if (channel) {
     supabase.removeChannel(channel);
   }
@@ -365,9 +364,7 @@ function listenMessages() {
   channel = supabase
     .channel('messages-channel')
 
-    // ===============================
-    // عند إضافة رسالة جديدة
-    // ===============================
+    // عند إضافة رسالة
     .on(
       'postgres_changes',
       {
@@ -379,48 +376,21 @@ function listenMessages() {
 
         const msg = payload.new;
 
-        // ❌ لا تعرض رسالتي أنا (لأنها معروضة محلياً)
         if (msg.sender_id === me.id) return;
 
-        // ===============================
-        // لو الرسالة ليست في الشات المفتوح
-        // ===============================
         if (msg.chat_id !== chatId) {
-          loadUsers(); // تحديث العداد فقط
+          unreadCounts[msg.sender_id] =
+            (unreadCounts[msg.sender_id] || 0) + 1;
+
+          loadUsers();
           return;
         }
 
-        // ===============================
-        // منع التكرار
-        // ===============================
-        if (document.getElementById("msg-" + msg.id)) return;
-
-        // ===============================
-        // عرض الرسالة مباشرة
-        // ===============================
-        let box = document.getElementById("messages");
-
-        let div = document.createElement("div");
-        div.id = "msg-" + msg.id;
-        div.className = "other";
-        div.textContent = msg.text;
-
-        box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
-
-        // تحديثها كمقروءة
-        await supabase
-          .from("messages")
-          .update({ is_read: true })
-          .eq("id", msg.id);
-
-        loadUsers(); // تحديث العداد
+        await loadMessages();
       }
     )
 
-    // ===============================
     // عند حذف رسالة
-    // ===============================
     .on(
       'postgres_changes',
       {
@@ -434,14 +404,14 @@ function listenMessages() {
         const msgElement = document.getElementById("msg-" + deletedId);
 
         if (msgElement) {
-          msgElement.remove();
+          msgElement.remove(); // 🔥 حذف فوري بدون تحديث
         }
       }
     )
 
-    .subscribe();
-}
+    .subscribe(); // ✅ مهم جداً
 
+}
 
 
 document.getElementById("send").onclick = async () => {
@@ -550,7 +520,7 @@ function setupSendButton() {
       let div = document.createElement("div");
       div.id = "msg-" + data.id;
       div.className = "my";
-      div.textContent = "  " + data.text;
+      div.textContent = "أنا: " + data.text;
 
       // زر حذف
       let delBtn = document.createElement("button");
@@ -593,8 +563,4 @@ function setupSendButton() {
 </script>
 </body>
 </html>
-
-
-
-
 

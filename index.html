@@ -315,16 +315,18 @@ async function loadMessages() {
   data.forEach(msg => {
 
     let div = document.createElement("div");
+    div.id = "msg-" + msg.id; // مهم للحذف الفوري
+
     div.className =
       msg.sender_id === me.id ? "my" : "other";
 
-    let senderName = msg.sender?.username || "مستخدم";
+    let senderName =
+      msg.sender?.username || "مستخدم";
 
-    div.innerHTML = `
-      <span>${senderName}: ${msg.text}</span>
-    `;
+    div.innerHTML =
+      senderName + ": " + msg.text;
 
-    // زر حذف فقط لرسائلي أنا
+    // زر حذف لرسائلي فقط
     if (msg.sender_id === me.id) {
 
       let delBtn = document.createElement("button");
@@ -335,14 +337,12 @@ async function loadMessages() {
       delBtn.style.cursor = "pointer";
 
       delBtn.onclick = async () => {
-        if (!confirm("هل تريد حذف الرسالة؟")) return;
 
         await supabase
           .from("messages")
           .delete()
           .eq("id", msg.id);
 
-        await loadMessages();
       };
 
       div.appendChild(delBtn);
@@ -354,22 +354,6 @@ async function loadMessages() {
   box.scrollTop = box.scrollHeight;
 }
 
-function showToast(message) {
-  const toast = document.createElement("div");
-  toast.className = "toast";
-  toast.textContent = message;
-
-  document.body.appendChild(toast);
-
-  setTimeout(() => {
-    toast.classList.add("show");
-  }, 100);
-
-  setTimeout(() => {
-    toast.classList.remove("show");
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
-}
 
 function listenMessages() {
 
@@ -470,11 +454,13 @@ document.getElementById("send").onclick = async () => {
   let box = document.getElementById("messages");
 
   let div = document.createElement("div");
-div.id = "msg-" + msg.id;
+div.id = "msg-" + data.id; // استخدم data وليس msg
+div.className = "my";
+div.textContent = "أنا: " + data.text;
 
+box.appendChild(div);
+box.scrollTop = box.scrollHeight;
 
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
 
   document.getElementById("msg").value = "";
 };
@@ -489,6 +475,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

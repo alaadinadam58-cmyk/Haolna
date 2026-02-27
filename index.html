@@ -454,6 +454,13 @@ document.getElementById("send").onclick = async () => {
 
   
 
+ // 🔥 عرض الرسالة فوراً محلياً
+      let box = document.getElementById("messages");
+
+      let div = document.createElement("div");
+      div.id = "msg-" + data.id;
+      div.className = "my";
+     div.textContent = data.text;
 
   
 
@@ -518,14 +525,7 @@ function setupSendButton() {
         return;
       }
 
-      // 🔥 عرض الرسالة فوراً محلياً
-      let box = document.getElementById("messages");
-
-      let div = document.createElement("div");
-      div.id = "msg-" + data.id;
-      div.className = "my";
-     div.textContent = data.text;
-
+     
 
       // زر حذف
       let delBtn = document.createElement("button");
@@ -568,6 +568,7 @@ function setupSendButton() {
 </script>
 </body>
 </html>
+
 
 
 

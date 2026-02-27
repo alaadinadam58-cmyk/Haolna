@@ -363,7 +363,7 @@ function listenMessages() {
 
   channel = supabase
     .channel('messages-channel')
-    
+
     // عند إضافة رسالة
     .on(
       'postgres_changes',
@@ -392,78 +392,27 @@ function listenMessages() {
 
     // عند حذف رسالة
     .on(
-  'postgres_changes',
-  {
-    event: 'DELETE',
-    schema: 'public',
-    table: 'messages'
-  },
-  (payload) => {
+      'postgres_changes',
+      {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'messages'
+      },
+      (payload) => {
 
-    const deletedId = payload.old.id;
+        const deletedId = payload.old.id;
+        const msgElement = document.getElementById("msg-" + deletedId);
 
-    const msgElement = document.getElementById("msg-" + deletedId);
+        if (msgElement) {
+          msgElement.remove(); // 🔥 حذف فوري بدون تحديث
+        }
+      }
+    )
 
-    if (msgElement) {
-      msgElement.remove();
-    }
-  }
-)
+    .subscribe(); // ✅ مهم جداً
 
+}
 
-
-
-
-document.getElementById("send").onclick = async () => {
-
-  let t = document.getElementById("msg").value.trim();
-  if (!t || !chatId) return;
-
-  const { data: chat } = await supabase
-    .from("chats")
-    .select("user1, user2")
-    .eq("id", chatId)
-    .single();
-
-  let receiverId =
-    chat.user1 === me.id ? chat.user2 : chat.user1;
-
-  const { data, error } = await supabase
-    .from("messages")
-    .insert({
-      chat_id: chatId,
-      sender_id: me.id,
-      receiver_id: receiverId,
-      text: t
-    })
-    .select(`
-  id,
-  text,
-  sender_id,
-  sender:sender_id ( username )
-`)
-
-    .single();
-
-  if (error) {
-    console.error(error);
-    return;
-  }
-
-  // 🔥 عرض الرسالة فوراً محلياً
-  let box = document.getElementById("messages");
-
-  let div = document.createElement("div");
-div.id = "msg-" + data.id; // استخدم data وليس msg
-div.className = "my";
-div.textContent = "أنا: " + data.text;
-
-box.appendChild(div);
-box.scrollTop = box.scrollHeight;
-
-
-  document.getElementById("msg").value = "";
-};
 
 
   
@@ -475,6 +424,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

@@ -408,26 +408,23 @@ function listenMessages() {
 
     // عند حذف رسالة
     .on(
-      'postgres_changes',
-      {
-        event: 'DELETE',
-        schema: 'public',
-        table: 'messages'
-      },
-      async (payload) => {
+  'postgres_changes',
+  {
+    event: 'DELETE',
+    schema: 'public',
+    table: 'messages'
+  },
+  (payload) => {
 
-        const msg = payload.old;
+    const deletedId = payload.old.id;
 
-        // إذا الحذف في نفس الشات
-        if (msg.chat_id === chatId) {
-          await loadMessages();
-        }
-      }
-    )
+    const msgElement = document.getElementById("msg-" + deletedId);
 
-    .subscribe();
-}
-
+    if (msgElement) {
+      msgElement.remove();
+    }
+  }
+)
 
 
 
@@ -456,10 +453,12 @@ document.getElementById("send").onclick = async () => {
       text: t
     })
     .select(`
-      text,
-      sender_id,
-      sender:sender_id ( username )
-    `)
+  id,
+  text,
+  sender_id,
+  sender:sender_id ( username )
+`)
+
     .single();
 
   if (error) {
@@ -471,8 +470,8 @@ document.getElementById("send").onclick = async () => {
   let box = document.getElementById("messages");
 
   let div = document.createElement("div");
-  div.textContent = data.sender.username + ": " + data.text;
-  div.className = "my";
+div.id = "msg-" + msg.id;
+
 
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
@@ -490,6 +489,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

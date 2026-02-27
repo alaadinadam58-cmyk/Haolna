@@ -320,13 +320,11 @@ async function loadMessages() {
     div.className =
       msg.sender_id === me.id ? "my" : "other";
 
-    if (msg.sender_id === me.id) {
-  div.textContent = msg.text;
-} else {
-  let senderName = msg.sender?.username || "مستخدم";
-  div.textContent = senderName + ": " + msg.text;
-}
+    let senderName =
+      msg.sender?.username || "مستخدم";
 
+    div.innerHTML =
+      senderName + ": " + msg.text;
 
     // زر حذف لرسائلي فقط
     if (msg.sender_id === me.id) {
@@ -450,7 +448,7 @@ document.getElementById("send").onclick = async () => {
     return;
   }
 
-// 🔥 عرض الرسالة فوراً محلياً
+  // 🔥 عرض الرسالة فوراً محلياً
   let box = document.getElementById("messages");
 
   let div = document.createElement("div");
@@ -462,8 +460,27 @@ document.getElementById("send").onclick = async () => {
 
   document.getElementById("msg").value = "";
 };
+
+
   
 
+await initUser();
+await loadUsers();
+listenMessages();
+  // زر حذف
+      let delBtn = document.createElement("button");
+      delBtn.textContent = "🗑";
+      delBtn.style.marginRight = "8px";
+      delBtn.style.border = "none";
+      delBtn.style.background = "transparent";
+      delBtn.style.cursor = "pointer";
+
+      delBtn.onclick = async () => {
+        await supabase
+          .from("messages")
+          .delete()
+          .eq("id", data.id);
+      };
 setupSendButton(); // 🔥 مهم جداً
 
 function setupSendButton() {
@@ -520,36 +537,16 @@ function setupSendButton() {
         console.error(error);
         return;
       }
-// 🔥 عرض الرسالة فوراً محلياً
-  let box = document.getElementById("messages");
 
-  let div = document.createElement("div");
-  div.textContent = data.sender.username + ": " + data.text;
-  div.className = "my";
+      // 🔥 عرض الرسالة فوراً محلياً
+      let box = document.getElementById("messages");
 
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
-
-  document.getElementById("msg").value = "";
-};
-
+      let div = document.createElement("div");
+      div.id = "msg-" + data.id;
+      div.className = "my";
+      div.textContent = "أنا: " + data.text;
 
       
-
-      // زر حذف
-      let delBtn = document.createElement("button");
-      delBtn.textContent = "🗑";
-      delBtn.style.marginRight = "8px";
-      delBtn.style.border = "none";
-      delBtn.style.background = "transparent";
-      delBtn.style.cursor = "pointer";
-
-      delBtn.onclick = async () => {
-        await supabase
-          .from("messages")
-          .delete()
-          .eq("id", data.id);
-      };
 
       div.appendChild(delBtn);
 
@@ -577,6 +574,4 @@ function setupSendButton() {
 </script>
 </body>
 </html>
-
-
 

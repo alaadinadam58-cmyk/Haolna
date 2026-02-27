@@ -378,14 +378,22 @@ function listenMessages() {
   }
 
   channel = supabase
-    .channel("incoming")
+    .channel('messages-channel')
     .on(
-
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages'
+      },
       async (payload) => {
 
         const msg = payload.new;
 
-        // إذا الرسالة في شات آخر
+        // تجاهل رسائلي أنا
+        if (msg.sender_id === me.id) return;
+
+        // لو ليست في نفس الشات → عداد
         if (msg.chat_id !== chatId) {
 
           unreadCounts[msg.sender_id] =
@@ -395,25 +403,24 @@ function listenMessages() {
           return;
         }
 
-        // عرض مباشر
-        const { data } = await supabase
-          .from("users")
-          .select("username")
-          .eq("id", msg.sender_id)
-          .single();
-
-        let box = document.getElementById("messages");
-
-        let div = document.createElement("div");
-        div.textContent = data.username + ": " + msg.text;
-        div.className = "other";
-
-        box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
+        // تحميل الرسائل مباشرة
+        await loadMessages();
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'messages'
+      },
+      async () => {
+        await loadMessages();
       }
     )
     .subscribe();
 }
+
 
 
 
@@ -476,6 +483,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

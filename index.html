@@ -320,11 +320,13 @@ async function loadMessages() {
     div.className =
       msg.sender_id === me.id ? "my" : "other";
 
-    let senderName =
-      msg.sender?.username || "مستخدم";
+    if (msg.sender_id === me.id) {
+  div.textContent = msg.text;
+} else {
+  let senderName = msg.sender?.username || "مستخدم";
+  div.textContent = senderName + ": " + msg.text;
+}
 
-    div.innerHTML =
-      senderName + ": " + msg.text;
 
     // زر حذف لرسائلي فقط
     if (msg.sender_id === me.id) {
@@ -450,7 +452,25 @@ document.getElementById("send").onclick = async () => {
 
   
 
+  // 🔥 عرض الرسالة فوراً محلياً
+  let box = document.getElementById("messages");
+
+  let div = document.createElement("div");
+  div.textContent = data.sender.username + ": " + data.text;
+  div.className = "my";
+
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+
+  document.getElementById("msg").value = "";
+};
+
+
   
+
+await initUser();
+await loadUsers();
+listenMessages();
 
 setupSendButton(); // 🔥 مهم جداً
 
@@ -515,7 +535,8 @@ function setupSendButton() {
       let div = document.createElement("div");
       div.id = "msg-" + data.id;
       div.className = "my";
-      div.textContent = "أنا: " + data.text;
+     div.textContent = data.text;
+
 
       // زر حذف
       let delBtn = document.createElement("button");

@@ -454,6 +454,50 @@ async function sendMessage() {
 
   await loadMessages();
 }
+/* =========================
+   إرسال صورة
+========================= */
+async function sendImage(file) {
+
+  if (!file || !chatId) return;
+
+  const { data: chat } = await supabase
+    .from("chats")
+    .select("user1, user2")
+    .eq("id", chatId)
+    .single();
+
+  let receiverId =
+    chat.user1 === me.id ? chat.user2 : chat.user1;
+
+  const fileName = Date.now() + "-" + file.name;
+
+  const { error } = await supabase.storage
+    .from("chat-images")
+    .upload(fileName, file);
+
+  if (error) {
+    alert("فشل رفع الصورة");
+    return;
+  }
+
+  const { data: publicUrl } =
+    supabase.storage
+      .from("chat-images")
+      .getPublicUrl(fileName);
+
+  await supabase
+    .from("messages")
+    .insert({
+      chat_id: chatId,
+      sender_id: me.id,
+      receiver_id: receiverId,
+      image_url: publicUrl.publicUrl,
+      is_read: false
+    });
+
+  await loadMessages();
+}
 
 /* =========================
    ربط الأزرار
@@ -476,6 +520,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

@@ -172,8 +172,25 @@ header {
   <h3 id="chat-header">اختر مستخدم لبدء المحادثة</h3>
   <div id="messages"></div>
   <div class="input-area">
-    <input id="msg" placeholder="اكتب رسالة..." />
-    <button id="send">إرسال</button>
+  <input id="msg" placeholder="اكتب رسالة..." />
+  <input type="file" id="imageInput" accept="image/*" style="display:none">
+  <button id="imgBtn">📷</button>
+  <button id="send">إرسال</button>
+    document.getElementById("imgBtn").onclick = () => {
+  document.getElementById("imageInput").click();
+};
+
+document.getElementById("imageInput")
+  .addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      await sendImage(file);
+      e.target.value = "";
+    }
+  });
+
+</div>
+
   </div>
 </div>
 
@@ -296,6 +313,7 @@ async function loadMessages() {
     .select(`
       id,
       text,
+      image_url,
       sender_id,
       sender:sender_id ( username )
     `)
@@ -312,20 +330,54 @@ async function loadMessages() {
 
     if (msg.sender_id === me.id) {
       div.className = "my";
-      div.textContent = msg.text;
+    } else {
+      div.className = "other";
+    }
+
+    // عرض النص
+    if (msg.text) {
+      let text = document.createElement("div");
+      text.textContent = msg.sender_id === me.id
+        ? msg.text
+        : msg.sender?.username + ": " + msg.text;
+      div.appendChild(text);
+    }
+
+    // عرض الصورة
+    if (msg.image_url) {
+      let img = document.createElement("img");
+      img.src = msg.image_url;
+      img.style.maxWidth = "200px";
+      img.style.borderRadius = "10px";
+      img.style.marginTop = "5px";
+      div.appendChild(img);
+    }
+
+    // زر الحذف (لصاحب الرسالة فقط)
+    if (msg.sender_id === me.id) {
 
       let del = document.createElement("button");
       del.textContent = "🗑";
       del.style.marginRight = "6px";
+
       del.onclick = async () => {
-        await supabase.from("messages").delete().eq("id", msg.id);
+
+        // حذف الصورة من Storage لو موجودة
+        if (msg.image_url) {
+          const path = msg.image_url.split("/chat-images/")[1];
+          await supabase.storage
+            .from("chat-images")
+            .remove([path]);
+        }
+
+        // حذف الرسالة من الجدول
+        await supabase
+          .from("messages")
+          .delete()
+          .eq("id", msg.id);
       };
 
       div.appendChild(del);
-
-    } else {
-      div.className = "other";
-      div.textContent = msg.sender?.username + ": " + msg.text;
     }
 
     box.appendChild(div);
@@ -334,7 +386,6 @@ async function loadMessages() {
   box.scrollTop = box.scrollHeight;
 }
 
-/* =========================
    الاستماع الفوري
 ========================= */
 function listenMessages() {
@@ -344,6 +395,9 @@ function listenMessages() {
   channel = supabase
     .channel("realtime-messages")
 
+    /* =========================
+       عند إضافة رسالة جديدة
+    ========================== */
     .on(
       "postgres_changes",
       {
@@ -355,10 +409,10 @@ function listenMessages() {
 
         const msg = payload.new;
 
-        // لا تعرض رسالتي (أنا أعرضها محلياً)
+        // لا تعرض رسالتي (أنا أعرضها عبر loadMessages)
         if (msg.sender_id === me.id) return;
 
-        // لو الرسالة ليست في الشات المفتوح
+        // لو ليست في الشات المفتوح
         if (msg.chat_id !== chatId) {
           loadUsers();
           return;
@@ -379,7 +433,23 @@ function listenMessages() {
         let div = document.createElement("div");
         div.id = "msg-" + msg.id;
         div.className = "other";
-        div.textContent = user.username + ": " + msg.text;
+
+        // النص
+        if (msg.text) {
+          let text = document.createElement("div");
+          text.textContent = user.username + ": " + msg.text;
+          div.appendChild(text);
+        }
+
+        // الصورة
+        if (msg.image_url) {
+          let img = document.createElement("img");
+          img.src = msg.image_url;
+          img.style.maxWidth = "200px";
+          img.style.borderRadius = "10px";
+          img.style.marginTop = "5px";
+          div.appendChild(img);
+        }
 
         box.appendChild(div);
         box.scrollTop = box.scrollHeight;
@@ -394,6 +464,9 @@ function listenMessages() {
       }
     )
 
+    /* =========================
+       عند حذف رسالة
+    ========================== */
     .on(
       "postgres_changes",
       {
@@ -409,6 +482,7 @@ function listenMessages() {
 
     .subscribe();
 }
+
 
 
 /* =========================
@@ -454,6 +528,51 @@ document.getElementById("send").addEventListener("click", sendMessage);
 document.getElementById("msg").addEventListener("keypress", e => {
   if (e.key === "Enter") sendMessage();
 });
+async function sendImage(file) {
+
+  if (!file || !chatId) return;
+
+  const { data: chat } = await supabase
+    .from("chats")
+    .select("user1, user2")
+    .eq("id", chatId)
+    .single();
+
+  let receiverId =
+    chat.user1 === me.id ? chat.user2 : chat.user1;
+
+  const fileName = Date.now() + "-" + file.name;
+
+  // 1️⃣ رفع الصورة
+  const { error } = await supabase.storage
+    .from("chat-images")
+    .upload(fileName, file);
+
+  if (error) {
+    alert("فشل رفع الصورة");
+    return;
+  }
+
+  // 2️⃣ جلب الرابط
+  const { data: publicUrl } =
+    supabase.storage
+      .from("chat-images")
+      .getPublicUrl(fileName);
+
+  // 3️⃣ إدخال الرسالة
+  await supabase
+    .from("messages")
+    .insert({
+      chat_id: chatId,
+      sender_id: me.id,
+      receiver_id: receiverId,
+      text: null,
+      image_url: publicUrl.publicUrl,
+      is_read: false
+    });
+
+  await loadMessages();
+}
 
 /* =========================
    تشغيل التطبيق
@@ -467,6 +586,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

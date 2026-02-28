@@ -499,15 +499,6 @@ async function sendImage(file) {
   await loadMessages();
 }
 
-/* =========================
-   ربط الأزرار
-========================= */
-document.getElementById("send").addEventListener("click", sendMessage);
-
-document.getElementById("msg").addEventListener("keypress", e => {
-  if (e.key === "Enter") sendMessage();
-});
-
 document.getElementById("imgBtn").onclick = () => {
   document.getElementById("imageInput").click();
 };
@@ -518,6 +509,9 @@ document.getElementById("imageInput")
     if (file) {
       await sendImage(file);
       e.target.value = "";
+    }
+  });
+
 
 /* =========================
    تشغيل التطبيق
@@ -531,6 +525,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

@@ -175,7 +175,6 @@ header {
   <input id="msg" placeholder="اكتب رسالة..." />
   <input type="file" id="imageInput" accept="image/*" style="display:none">
   <button id="imgBtn">📷</button>
-  <button id="send">إرسال</button>
     document.getElementById("imgBtn").onclick = () => {
   document.getElementById("imageInput").click();
 };
@@ -188,6 +187,8 @@ document.getElementById("imageInput")
       e.target.value = "";
     }
   });
+  <button id="send">إرسال</button>
+    
 
 </div>
 
@@ -586,6 +587,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

@@ -173,6 +173,9 @@ header {
   <div id="messages"></div>
   <div class="input-area">
     <input id="msg" placeholder="اكتب رسالة..." />
+    <input type="file" id="imageInput" accept="image/*" style="display:none" />
+<button id="imgBtn">📷</button>
+
     <button id="send">إرسال</button>
   </div>
 </div>
@@ -293,12 +296,7 @@ async function loadMessages() {
 
   let { data, error } = await supabase
     .from("messages")
-    .select(`
-      id,
-      text,
-      sender_id,
-      sender:sender_id ( username )
-    `)
+    .select("*")
     .eq("chat_id", chatId)
     .order("created_at", { ascending: true });
 
@@ -307,35 +305,39 @@ async function loadMessages() {
     return;
   }
 
-  // جلب الرسائل المخفية لهذا المستخدم
-  const { data: hidden } = await supabase
-    .from("message_hidden")
-    .select("message_id")
-    .eq("user_id", me.id);
-
-  const hiddenIds = hidden.map(h => h.message_id);
-
   let box = document.getElementById("messages");
   box.innerHTML = "";
 
   data.forEach(msg => {
 
-    // 🚫 لا تعرض الرسالة إذا كانت مخفية عندي
-    if (hiddenIds.includes(msg.id)) return;
-
     let div = document.createElement("div");
     div.id = "msg-" + msg.id;
-    div.className =
-      msg.sender_id === me.id ? "my" : "other";
+    div.className = msg.sender_id === me.id ? "my" : "other";
 
-    if (msg.sender_id === me.id) {
-      div.textContent = msg.text;
-    } else {
-      div.textContent =
-        msg.sender?.username + ": " + msg.text;
+    // =========================
+    // عرض النص
+    // =========================
+    if (msg.text) {
+      let textNode = document.createElement("div");
+      textNode.textContent = msg.text;
+      div.appendChild(textNode);
     }
 
-    // زر حذف (حذف محلي للجميع)
+    // =========================
+    // عرض الصورة
+    // =========================
+    if (msg.image_url) {
+      let img = document.createElement("img");
+      img.src = msg.image_url;
+      img.style.maxWidth = "220px";
+      img.style.borderRadius = "10px";
+      img.style.marginTop = "5px";
+      div.appendChild(img);
+    }
+
+    // =========================
+    // زر الحذف للطرفين
+    // =========================
     let delBtn = document.createElement("button");
     delBtn.textContent = "🗑";
     delBtn.style.marginRight = "8px";
@@ -345,26 +347,26 @@ async function loadMessages() {
 
     delBtn.onclick = async () => {
 
-      if (msg.sender_id === me.id) {
-        // 🔥 حذف من القاعدة (للجميع)
-        await supabase
-          .from("messages")
-          .delete()
-          .eq("id", msg.id);
-      } else {
-        // 🔥 حذف لي أنا فقط
-        await supabase
-          .from("message_hidden")
-          .insert({
-            message_id: msg.id,
-            user_id: me.id
-          });
+      // حذف الصورة من storage
+      if (msg.image_url) {
 
-        div.remove();
+        const path =
+          msg.image_url.split("/chat-images/")[1];
+
+        await supabase.storage
+          .from("chat-images")
+          .remove([path]);
       }
+
+      // حذف الرسالة من الجدول
+      await supabase
+        .from("messages")
+        .delete()
+        .eq("id", msg.id);
     };
 
     div.appendChild(delBtn);
+
     box.appendChild(div);
   });
 
@@ -498,12 +500,144 @@ document.getElementById("msg").addEventListener("keypress", e => {
 await initUser();
 await loadUsers();
 listenMessages();
+function setupSendButton() {
+
+  const sendBtn = document.getElementById("send");
+  const msgInput = document.getElementById("msg");
+  const imageInput = document.getElementById("imageInput");
+  const imgBtn = document.getElementById("imgBtn");
+
+  // فتح اختيار الصور
+  imgBtn.onclick = () => imageInput.click();
+
+  async function sendMessage() {
+
+    let text = msgInput.value.trim();
+    let file = imageInput.files[0];
+
+    if (!text && !file) return;
+
+    if (!chatId) {
+      alert("اختر مستخدم أولاً");
+      return;
+    }
+
+    try {
+
+      // جلب المستقبل
+      const { data: chat, error: chatError } = await supabase
+        .from("chats")
+        .select("user1, user2")
+        .eq("id", chatId)
+        .single();
+
+      if (chatError) {
+        console.error(chatError);
+        return;
+      }
+
+      let receiverId =
+        chat.user1 === me.id ? chat.user2 : chat.user1;
+
+      let imageUrl = null;
+
+      // =========================
+      // رفع الصورة
+      // =========================
+      if (file) {
+
+        const fileName =
+          Date.now() + "-" + file.name;
+
+        const { error: uploadError } =
+          await supabase.storage
+            .from("chat-images")
+            .upload(fileName, file);
+
+        if (uploadError) {
+          console.error(uploadError);
+          return;
+        }
+
+        const { data: publicUrl } =
+          supabase.storage
+            .from("chat-images")
+            .getPublicUrl(fileName);
+
+        imageUrl = publicUrl.publicUrl;
+      }
+
+      // =========================
+      // إدخال الرسالة
+      // =========================
+      const { data, error } = await supabase
+        .from("messages")
+        .insert({
+          chat_id: chatId,
+          sender_id: me.id,
+          receiver_id: receiverId,
+          text: text || null,
+          image_url: imageUrl,
+          is_read: false
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      // =========================
+      // عرضها محلياً فوراً
+      // =========================
+      let box = document.getElementById("messages");
+
+      let div = document.createElement("div");
+      div.id = "msg-" + data.id;
+      div.className = "my";
+
+      if (data.text) {
+        let textNode = document.createElement("div");
+        textNode.textContent = data.text;
+        div.appendChild(textNode);
+      }
+
+      if (data.image_url) {
+        let img = document.createElement("img");
+        img.src = data.image_url;
+        img.style.maxWidth = "220px";
+        img.style.borderRadius = "10px";
+        img.style.marginTop = "5px";
+        div.appendChild(img);
+      }
+
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+
+      msgInput.value = "";
+      imageInput.value = "";
+
+    } catch (err) {
+      console.error("Send Error:", err);
+    }
+  }
+
+  sendBtn.onclick = sendMessage;
+
+  msgInput.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      sendMessage();
+    }
+  });
+}
 
 
 
 </script>
 </body>
 </html>
+
 
 
 

@@ -126,23 +126,25 @@ img{
 
 <div id="user-list"></div>
 
-<<!-- الدردشة بالأسفل أكبر -->
+<!-- الدردشة بالأسفل أكبر -->
 <div class="chat-panel">
   <h3 id="chat-header">اختر مستخدم لبدء المحادثة</h3>
+
   <div id="messages"></div>
+
   <div class="input-area">
-  <input id="msg" placeholder="اكتب رسالة..." />
+    <input id="msg" placeholder="اكتب رسالة..." />
 
-  <!-- input مخفي لرفع الصورة -->
-  <input type="file" id="imageInput" accept="image/*" style="display:none">
+    <!-- input مخفي لرفع الصورة -->
+    <input type="file" id="imageInput" accept="image/*" style="display:none">
 
-  <!-- زر الصورة -->
-  <button id="imgBtn">📷</button>
+    <!-- زر الصورة -->
+    <button id="imgBtn">📷</button>
 
-  <button id="send">إرسال</button>
+    <button id="send">إرسال</button>
+  </div>
 </div>
 
-</div>
 
 <script type="module">
 
@@ -221,6 +223,7 @@ document.getElementById("imageInput")
     if (file) {
       await sendImage(file);
       e.target.value = "";
+
 
 
 

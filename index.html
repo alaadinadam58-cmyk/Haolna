@@ -175,7 +175,14 @@ header {
   <input id="msg" placeholder="اكتب رسالة..." />
   <input type="file" id="imageInput" accept="image/*" style="display:none">
   <button id="imgBtn">📷</button>
-    document.getElementById("imgBtn").onclick = () => {
+   
+  <button id="send">إرسال</button>
+    
+
+</div>
+
+  </div>
+   document.getElementById("imgBtn").onclick = () => {
   document.getElementById("imageInput").click();
 };
 
@@ -187,12 +194,6 @@ document.getElementById("imageInput")
       e.target.value = "";
     }
   });
-  <button id="send">إرسال</button>
-    
-
-</div>
-
-  </div>
 </div>
 
 <script type="module">
@@ -587,6 +588,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

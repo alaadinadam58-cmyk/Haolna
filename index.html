@@ -508,6 +508,17 @@ document.getElementById("msg").addEventListener("keypress", e => {
   if (e.key === "Enter") sendMessage();
 });
 
+document.getElementById("imgBtn").onclick = () => {
+  document.getElementById("imageInput").click();
+};
+
+document.getElementById("imageInput")
+  .addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      await sendImage(file);
+      e.target.value = "";
+
 /* =========================
    تشغيل التطبيق
 ========================= */
@@ -520,6 +531,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

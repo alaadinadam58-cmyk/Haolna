@@ -291,7 +291,7 @@ async function openChat(u) {
 ========================= */
 async function loadMessages() {
 
-  let { data } = await supabase
+  let { data, error } = await supabase
     .from("messages")
     .select(`
       id,
@@ -302,32 +302,69 @@ async function loadMessages() {
     .eq("chat_id", chatId)
     .order("created_at", { ascending: true });
 
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  // جلب الرسائل المخفية لهذا المستخدم
+  const { data: hidden } = await supabase
+    .from("message_hidden")
+    .select("message_id")
+    .eq("user_id", me.id);
+
+  const hiddenIds = hidden.map(h => h.message_id);
+
   let box = document.getElementById("messages");
   box.innerHTML = "";
 
   data.forEach(msg => {
 
+    // 🚫 لا تعرض الرسالة إذا كانت مخفية عندي
+    if (hiddenIds.includes(msg.id)) return;
+
     let div = document.createElement("div");
     div.id = "msg-" + msg.id;
+    div.className =
+      msg.sender_id === me.id ? "my" : "other";
 
     if (msg.sender_id === me.id) {
-      div.className = "my";
       div.textContent = msg.text;
-
-      let del = document.createElement("button");
-      del.textContent = "🗑";
-      del.style.marginRight = "6px";
-      del.onclick = async () => {
-        await supabase.from("messages").delete().eq("id", msg.id);
-      };
-
-      div.appendChild(del);
-
     } else {
-      div.className = "other";
-      div.textContent = msg.sender?.username + ": " + msg.text;
+      div.textContent =
+        msg.sender?.username + ": " + msg.text;
     }
 
+    // زر حذف (حذف محلي للجميع)
+    let delBtn = document.createElement("button");
+    delBtn.textContent = "🗑";
+    delBtn.style.marginRight = "8px";
+    delBtn.style.border = "none";
+    delBtn.style.background = "transparent";
+    delBtn.style.cursor = "pointer";
+
+    delBtn.onclick = async () => {
+
+      if (msg.sender_id === me.id) {
+        // 🔥 حذف من القاعدة (للجميع)
+        await supabase
+          .from("messages")
+          .delete()
+          .eq("id", msg.id);
+      } else {
+        // 🔥 حذف لي أنا فقط
+        await supabase
+          .from("message_hidden")
+          .insert({
+            message_id: msg.id,
+            user_id: me.id
+          });
+
+        div.remove();
+      }
+    };
+
+    div.appendChild(delBtn);
     box.appendChild(div);
   });
 
@@ -467,6 +504,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

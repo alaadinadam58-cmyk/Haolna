@@ -305,6 +305,7 @@ async function loadMessages() {
     .select(`
       id,
       text,
+      image_url,
       sender_id,
       sender:sender_id ( username )
     `)
@@ -321,20 +322,42 @@ async function loadMessages() {
 
     if (msg.sender_id === me.id) {
       div.className = "my";
-      div.textContent = msg.text;
+    } else {
+      div.className = "other";
+    }
 
+    // عرض النص
+    if (msg.text) {
+      let text = document.createElement("div");
+
+      if (msg.sender_id === me.id) {
+        text.textContent = msg.text;
+      } else {
+        text.textContent = msg.sender?.username + ": " + msg.text;
+      }
+
+      div.appendChild(text);
+    }
+
+    // عرض الصورة
+    if (msg.image_url) {
+      let img = document.createElement("img");
+      img.src = msg.image_url;
+      img.style.maxWidth = "200px";
+      img.style.borderRadius = "10px";
+      img.style.marginTop = "5px";
+      div.appendChild(img);
+    }
+
+    // زر الحذف لرسائلي فقط
+    if (msg.sender_id === me.id) {
       let del = document.createElement("button");
       del.textContent = "🗑";
       del.style.marginRight = "6px";
       del.onclick = async () => {
         await supabase.from("messages").delete().eq("id", msg.id);
       };
-
       div.appendChild(del);
-
-    } else {
-      div.className = "other";
-      div.textContent = msg.sender?.username + ": " + msg.text;
     }
 
     box.appendChild(div);
@@ -342,6 +365,7 @@ async function loadMessages() {
 
   box.scrollTop = box.scrollHeight;
 }
+
 
 /* =========================
    الاستماع الفوري
@@ -525,6 +549,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

@@ -78,8 +78,8 @@ button{
    إعداد Supabase
 ========================= */
 const supabase = window.supabase.createClient(
-  "YOUR_SUPABASE_URL",
-  "YOUR_SUPABASE_ANON_KEY"
+  "https://szjeerdjuyuqyrixqihb.supabase.co",
+  "sb_publishable_GpdhY2DBLlI0t3VdzXUWOA_dt43iBLx"
 );
 
 let me = null;
@@ -141,3 +141,4 @@ async function startChat(otherId){
     const { data } = await supabase
       .from("chats")
       .insert({ user1:me.id , user2:otherId
+

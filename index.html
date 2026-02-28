@@ -455,34 +455,149 @@ function listenMessages() {
 ========================= */
 async function sendMessage() {
 
-  let input = document.getElementById("msg");
-  let text = input.value.trim();
+  const msgInput   = document.getElementById("msg");
+  const imageInput = document.getElementById("imageInput");
+  const box        = document.getElementById("messages");
 
-  if (!text || !chatId) return;
+  let text = msgInput.value.trim();
+  let file = imageInput.files[0];
 
-  const { data: chat } = await supabase
-    .from("chats")
-    .select("user1, user2")
-    .eq("id", chatId)
-    .single();
+  // لا يوجد نص ولا صورة
+  if (!text && !file) return;
 
-  let receiverId = chat.user1 === me.id ? chat.user2 : chat.user1;
+  if (!chatId) {
+    alert("اختر مستخدم أولاً");
+    return;
+  }
 
-  const { data } = await supabase
-    .from("messages")
-    .insert({
-      chat_id: chatId,
-      sender_id: me.id,
-      receiver_id: receiverId,
-      text: text,
-      is_read: false
-    })
-    .select()
-    .single();
+  try {
 
-  input.value = "";
+    // ===== جلب بيانات الشات =====
+    const { data: chat, error: chatError } = await supabase
+      .from("chats")
+      .select("user1, user2")
+      .eq("id", chatId)
+      .single();
 
-  await loadMessages();
+    if (chatError) {
+      console.error(chatError);
+      return;
+    }
+
+    let receiverId =
+      chat.user1 === me.id ? chat.user2 : chat.user1;
+
+    let imageUrl = null;
+
+    // ===================================
+    // رفع الصورة إن وجدت
+    // ===================================
+    if (file) {
+
+      const fileName =
+        Date.now() + "-" + file.name;
+
+      const { error: uploadError } =
+        await supabase.storage
+          .from("chat-images")
+          .upload(fileName, file);
+
+      if (uploadError) {
+        console.error(uploadError);
+        alert("فشل رفع الصورة");
+        return;
+      }
+
+      const { data: publicUrl } =
+        supabase.storage
+          .from("chat-images")
+          .getPublicUrl(fileName);
+
+      imageUrl = publicUrl.publicUrl;
+    }
+
+    // ===================================
+    // إدخال الرسالة في قاعدة البيانات
+    // ===================================
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({
+        chat_id: chatId,
+        sender_id: me.id,
+        receiver_id: receiverId,
+        text: text || null,
+        image_url: imageUrl,
+        is_read: false
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error(error);
+      alert("فشل إرسال الرسالة");
+      return;
+    }
+
+    // ===================================
+    // عرض الرسالة فوراً محلياً
+    // ===================================
+    let div = document.createElement("div");
+    div.id = "msg-" + data.id;
+    div.className = "my";
+
+    if (data.text) {
+      let textNode = document.createElement("div");
+      textNode.textContent = data.text;
+      div.appendChild(textNode);
+    }
+
+    if (data.image_url) {
+      let img = document.createElement("img");
+      img.src = data.image_url;
+      img.style.maxWidth = "220px";
+      img.style.borderRadius = "10px";
+      img.style.marginTop = "5px";
+      div.appendChild(img);
+    }
+
+    // زر الحذف
+    let delBtn = document.createElement("button");
+    delBtn.textContent = "🗑";
+    delBtn.style.border = "none";
+    delBtn.style.background = "transparent";
+    delBtn.style.cursor = "pointer";
+    delBtn.style.marginTop = "5px";
+
+    delBtn.onclick = async () => {
+
+      if (data.image_url) {
+
+        const path =
+          data.image_url.split("/chat-images/")[1];
+
+        await supabase.storage
+          .from("chat-images")
+          .remove([path]);
+      }
+
+      await supabase
+        .from("messages")
+        .delete()
+        .eq("id", data.id);
+    };
+
+    div.appendChild(delBtn);
+
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+
+    // تنظيف الحقول
+    msgInput.value = "";
+    imageInput.value = "";
+
+  } catch (err) {
+    console.error("Send Error:", err);
+  }
 }
 
 /* =========================
@@ -637,6 +752,7 @@ function setupSendButton() {
 </script>
 </body>
 </html>
+
 
 
 

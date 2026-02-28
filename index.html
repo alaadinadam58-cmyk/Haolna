@@ -502,6 +502,80 @@ msgInput.addEventListener("keypress", e => {
 
 imgBtn.onclick = () => imageInput.click();
 
+  /* =========================
+   عند اختيار صورة
+========================= */
+imageInput.addEventListener("change", async () => {
+
+  const file = imageInput.files[0];
+  if (!file) return;
+
+  if (!chatId) {
+    alert("اختر مستخدم أولاً");
+    imageInput.value = "";
+    return;
+  }
+
+  try {
+
+    // جلب المستقبل
+    const { data: chat } = await supabase
+      .from("chats")
+      .select("user1, user2")
+      .eq("id", chatId)
+      .single();
+
+    const receiverId =
+      chat.user1 === me.id ? chat.user2 : chat.user1;
+
+    // اسم ملف فريد
+    const fileName = Date.now() + "-" + file.name;
+
+    // رفع الصورة
+    const { error: uploadError } =
+      await supabase.storage
+        .from("chat-images")
+        .upload(fileName, file);
+
+    if (uploadError) {
+      console.error(uploadError);
+      alert("فشل رفع الصورة");
+      return;
+    }
+
+    // جلب الرابط العام
+    const { data: publicUrl } =
+      supabase.storage
+        .from("chat-images")
+        .getPublicUrl(fileName);
+
+    const imageUrl = publicUrl.publicUrl;
+
+    // إدخال رسالة صورة مباشرة
+    const { data } = await supabase
+      .from("messages")
+      .insert({
+        chat_id: chatId,
+        sender_id: me.id,
+        receiver_id: receiverId,
+        text: null,
+        image_url: imageUrl,
+        is_read: false
+      })
+      .select()
+      .single();
+
+    // عرضها فوراً
+    renderMessage(data);
+    scrollToBottom();
+
+    imageInput.value = "";
+
+  } catch (err) {
+    console.error(err);
+  }
+});
+
 /* =========================
    تشغيل التطبيق
 ========================= */
@@ -513,6 +587,7 @@ listenMessages();
 
 </body>
 </html>
+
 
 
 

@@ -247,25 +247,28 @@ let channel = null;
 /* =========================
    تسجيل المستخدم
 ========================= */
+* =========================
+   تسجيل المستخدم
+========================= */
 async function initUser() {
-
   let saved = localStorage.getItem("uid");
 
   if (saved) {
-    let { data } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", saved)
-      .single();
-
-    if (data) {
-      me = data;
-      document.getElementById("loginScreen").style.display = "none";
-      return;
-    }
+    let { data } = await supabase.from("users").select("*").eq("id", saved).single();
+    if (data) { me = data; return; }
   }
 
-  // لا نفعل شيء هنا
+  let name = <p>اكتب اسمك للدخول إلى الشات</p>
+  if (!name) return;
+
+  let { data } = await supabase
+    .from("users")
+    .insert({ username: name })
+    .select()
+    .single();
+
+  localStorage.setItem("uid", data.id);
+  me = data;
 }
 async function registerUser(){
 
@@ -551,6 +554,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

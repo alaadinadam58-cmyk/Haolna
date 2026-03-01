@@ -222,6 +222,8 @@ header {
     <button id="send">إرسال</button>
   </div>
 </div>
+
+<script type="module">
 <div id="loginScreen">
   <div class="loginBox">
     <h2>مرحباً بك 👋</h2>
@@ -230,8 +232,6 @@ header {
     <button onclick="registerUser()">دخول</button>
   </div>
 </div>
-<script type="module">
-
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 const supabase = createClient(
@@ -550,6 +550,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

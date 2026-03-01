@@ -425,18 +425,20 @@ document.getElementById("imageInput")
     }
   });
 
-/* =========================
+ /* =========================
    تشغيل التطبيق
 ========================= */
 await initUser();
-await loadUsers();
+await loadUsers();   // ← هذا السطر كان مفقود
 listenMessages();
+
 
 </script>
 
 
 </body>
 </html>
+
 
 
 

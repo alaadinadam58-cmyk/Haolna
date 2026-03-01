@@ -189,7 +189,6 @@ const supabase = createClient(
   "https://szjeerdjuyuqyrixqihb.supabase.co",
   "sb_publishable_GpdhY2DBLlI0t3VdzXUWOA_dt43iBLx"
 );
-window.supabase = supabase;
 
 let me = null;
 let chatId = null;
@@ -220,83 +219,11 @@ async function initUser() {
 }
 
 /* =========================
-   تحميل المستخدمين
-========================= */
-async function loadUsers() {
-
-  let { data: users } = await supabase
-    .from("users")
-    .select("*")
-    .neq("id", me.id);
-
-  let box = document.getElementById("user-list");
-  box.innerHTML = "";
-
-  for (let u of users) {
-
-    const { count } = await supabase
-      .from("messages")
-      .select("*", { count: "exact", head: true })
-      .eq("sender_id", u.id)
-      .eq("receiver_id", me.id)
-      .eq("is_read", false);
-
-    let b = document.createElement("button");
-
-    if (count > 0) {
-      b.innerHTML = `${u.username} <span style="color:red">(${count})</span>`;
-    } else {
-      b.textContent = u.username;
-    }
-
-    b.onclick = () => openChat(u);
-
-    box.appendChild(b);
-  }
-}
-
-/* =========================
-   فتح محادثة
-========================= */
-async function openChat(u) {
-
-  let { data } = await supabase
-    .from("chats")
-    .select("*")
-    .or(`and(user1.eq.${me.id},user2.eq.${u.id}),and(user1.eq.${u.id},user2.eq.${me.id})`)
-    .single();
-
-  if (!data) {
-    let res = await supabase
-      .from("chats")
-      .insert({ user1: me.id, user2: u.id })
-      .select()
-      .single();
-
-    data = res.data;
-  }
-
-  chatId = data.id;
-
-  document.getElementById("chat-header").textContent = "الدردشة مع " + u.username;
-
-  await loadMessages();
-
-  await supabase
-    .from("messages")
-    .update({ is_read: true })
-    .eq("chat_id", chatId)
-    .eq("receiver_id", me.id);
-
-  loadUsers();
-}
-
-/* =========================
    تحميل الرسائل
 ========================= */
 async function loadMessages() {
 
-  let { data } = await supabase
+  const { data } = await supabase
     .from("messages")
     .select(`
       id,
@@ -308,60 +235,50 @@ async function loadMessages() {
     .eq("chat_id", chatId)
     .order("created_at", { ascending: true });
 
-  let box = document.getElementById("messages");
+  const box = document.getElementById("messages");
   box.innerHTML = "";
 
-  data.forEach(msg => {
-
-    let div = document.createElement("div");
-    div.id = "msg-" + msg.id;
-    div.className = msg.sender_id === me.id ? "my" : "other";
-
-    // لو رسالة نص
-    if (msg.text) {
-      div.textContent = msg.sender_id === me.id
-        ? msg.text
-        : msg.sender?.username + ": " + msg.text;
-    }
-
-    // لو رسالة صورة
-    if (msg.image_url) {
-      let img = document.createElement("img");
-      img.src = msg.image_url;
-      img.style.maxWidth = "200px";
-      img.style.borderRadius = "10px";
-      img.style.marginTop = "5px";
-      img.style.cursor = "pointer";
-
-      img.onclick = () => window.open(msg.image_url, "_blank");
-
-      div.appendChild(img);
-    }
-
-    box.appendChild(div);
-  });
+  data.forEach(msg => appendMessage(msg));
 
   box.scrollTop = box.scrollHeight;
 }
 
+/* =========================
+   عرض رسالة (نص أو صورة)
+========================= */
+function appendMessage(msg) {
 
-// دالة عرض الصورة بحجم كامل
-function openImagePreview(url) {
-  const overlay = document.createElement("div");
-  overlay.className = "image-overlay";
+  const box = document.getElementById("messages");
 
-  const fullImg = new Image();
-  fullImg.src = url;
+  if (document.getElementById("msg-" + msg.id)) return;
 
-  overlay.appendChild(fullImg);
+  const div = document.createElement("div");
+  div.id = "msg-" + msg.id;
+  div.className = msg.sender_id === me.id ? "my" : "other";
 
-  overlay.addEventListener("click", () => {
-    document.body.removeChild(overlay);
-  });
+  if (msg.text) {
+    div.textContent = msg.sender_id === me.id
+      ? msg.text
+      : (msg.sender?.username ? msg.sender.username + ": " + msg.text : msg.text);
+  }
 
-  document.body.appendChild(overlay);
+  if (msg.image_url) {
+    const img = document.createElement("img");
+    img.src = msg.image_url;
+    img.style.maxWidth = "200px";
+    img.style.borderRadius = "10px";
+    img.style.marginTop = "6px";
+    img.style.display = "block";
+    img.style.cursor = "pointer";
+
+    img.onclick = () => window.open(msg.image_url, "_blank");
+
+    div.appendChild(img);
+  }
+
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
 }
-
 
 /* =========================
    الاستماع الفوري
@@ -375,229 +292,37 @@ function listenMessages() {
 
     .on(
       "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "messages"
-      },
+      { event: "INSERT", schema: "public", table: "messages" },
       async (payload) => {
 
         const msg = payload.new;
 
-        // لا تعرض رسالتي (أنا أعرضها محلياً)
         if (msg.sender_id === me.id) return;
+        if (msg.chat_id !== chatId) return;
 
-        // لو الرسالة ليست في الشات المفتوح
-        if (msg.chat_id !== chatId) {
-          loadUsers();
-          return;
-        }
+        appendMessage(msg);
 
-        // منع التكرار
-        if (document.getElementById("msg-" + msg.id)) return;
-
-        // جلب اسم المرسل
-        const { data: user } = await supabase
-          .from("users")
-          .select("username")
-          .eq("id", msg.sender_id)
-          .single();
-
-        let box = document.getElementById("messages");
-
-       let div = document.createElement("div");
-div.id = "msg-" + msg.id;
-div.className = "other";
-
-// نص
-if (msg.text) {
-  div.textContent = user.username + ": " + msg.text;
-}
-
-// صورة
-if (msg.image_url) {
-  let img = document.createElement("img");
-  img.src = msg.image_url;
-  img.style.maxWidth = "200px";
-  img.style.borderRadius = "10px";
-  img.style.marginTop = "5px";
-  img.style.cursor = "pointer";
-
-  img.onclick = () => window.open(msg.image_url, "_blank");
-
-  div.appendChild(img);
-}
-
-box.appendChild(div);
-
-        // تحديثها كمقروءة
         await supabase
           .from("messages")
           .update({ is_read: true })
           .eq("id", msg.id);
-
-        loadUsers();
-      }
-    )
-
-    .on(
-      "postgres_changes",
-      {
-        event: "DELETE",
-        schema: "public",
-        table: "messages"
-      },
-      (payload) => {
-        let el = document.getElementById("msg-" + payload.old.id);
-        if (el) el.remove();
       }
     )
 
     .subscribe();
 }
 
-
 /* =========================
-   إرسال رسالة
+   إرسال رسالة نص
 ========================= */
 async function sendMessage() {
 
-  let input = document.getElementById("msg");
-  let text = input.value.trim();
+  const input = document.getElementById("msg");
+  const text =
 
-  if (!text || !chatId) return;
-
-  const { data: chat } = await supabase
-    .from("chats")
-    .select("user1, user2")
-    .eq("id", chatId)
-    .single();
-
-  let receiverId = chat.user1 === me.id ? chat.user2 : chat.user1;
-
-  const { data } = await supabase
-    .from("messages")
-    .insert({
-      chat_id: chatId,
-      sender_id: me.id,
-      receiver_id: receiverId,
-      text: text,
-      is_read: false
-    })
-    .select()
-    .single();
-
-  input.value = "";
-
-  await loadMessages();
-}
-/* =========================
-   إرسال صورة
-========================= */
-async function sendImage(file) {
-
-  try {
-
-    if (!file || !chatId) return;
-
-    // جلب بيانات المحادثة
-    const { data: chat, error: chatError } = await supabase
-      .from("chats")
-      .select("user1, user2")
-      .eq("id", chatId)
-      .single();
-
-    if (chatError) {
-      console.error("Chat error:", chatError);
-      alert("خطأ في جلب بيانات المحادثة");
-      return;
-    }
-
-    let receiverId =
-      chat.user1 === me.id ? chat.user2 : chat.user1;
-
-    // اسم فريد للصورة
-    const fileName = Date.now() + "-" + file.name;
-
-    // رفع الصورة إلى Storage
-    const { error: uploadError } = await supabase
-      .storage
-      .from("chat-images")
-      .upload(fileName, file);
-
-    if (uploadError) {
-      console.error("Upload error:", uploadError);
-      alert("فشل رفع الصورة - تحقق من إعدادات Storage");
-      return;
-    }
-
-    // الحصول على الرابط الصحيح
-    const { data } = supabase
-      .storage
-      .from("chat-images")
-      .getPublicUrl(fileName);
-
-    const imageUrl = data.publicUrl;
-
-    // حفظ الرسالة في قاعدة البيانات
-    const { error: insertError } = await supabase
-      .from("messages")
-      .insert({
-        chat_id: chatId,
-        sender_id: me.id,
-        receiver_id: receiverId,
-        image_url: imageUrl,
-        is_read: false
-      });
-
-    if (insertError) {
-      console.error("Insert error:", insertError);
-      alert("فشل حفظ الرسالة");
-      return;
-    }
-
-    await loadMessages();
-
-  } catch (err) {
-    console.error("Unexpected error:", err);
-    alert("حدث خطأ غير متوقع");
-  }
-}
-
-
-document.getElementById("imgBtn").onclick = () => {
-  document.getElementById("imageInput").click();
-};
-
-document.getElementById("imageInput")
-  .addEventListener("change", async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      await sendImage(file);
-      e.target.value = "";
-    }
-  });
-/* =========================
-   ربط الأزرار
-========================= */
-document.getElementById("send").addEventListener("click", sendMessage);
-
-document.getElementById("msg").addEventListener("keypress", e => {
-  if (e.key === "Enter") sendMessage();
-});
-
-/* =========================
-   تشغيل التطبيق
-========================= */
-await initUser();
-await loadUsers();
-listenMessages();
-
-
-
-</script>
 </body>
 </html>
+
 
 
 

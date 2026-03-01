@@ -318,10 +318,125 @@ function listenMessages() {
 async function sendMessage() {
 
   const input = document.getElementById("msg");
-  const text =
+  const text = input.value.trim();
+  if (!text || !chatId) return;
+
+  const { data: chat } = await supabase
+    .from("chats")
+    .select("user1, user2")
+    .eq("id", chatId)
+    .single();
+
+  const receiverId =
+    chat.user1 === me.id ? chat.user2 : chat.user1;
+
+  const { data } = await supabase
+    .from("messages")
+    .insert({
+      chat_id: chatId,
+      sender_id: me.id,
+      receiver_id: receiverId,
+      text,
+      is_read: false
+    })
+    .select()
+    .single();
+
+  input.value = "";
+  appendMessage(data);
+}
+
+/* =========================
+   إرسال صورة
+========================= */
+async function sendImage(file) {
+
+  if (!file || !chatId) return;
+
+  const { data: chat } = await supabase
+    .from("chats")
+    .select("user1, user2")
+    .eq("id", chatId)
+    .single();
+
+  const receiverId =
+    chat.user1 === me.id ? chat.user2 : chat.user1;
+
+  const fileName = `${chatId}/${Date.now()}-${file.name}`;
+
+  const { error: uploadError } = await supabase
+    .storage
+    .from("chat-images")
+    .upload(fileName, file);
+
+  if (uploadError) {
+    console.error(uploadError);
+    alert("فشل رفع الصورة");
+    return;
+  }
+
+  const { data: publicData } = supabase
+    .storage
+    .from("chat-images")
+    .getPublicUrl(fileName);
+
+  const imageUrl = publicData.publicUrl;
+
+  const { data: newMsg, error: insertError } = await supabase
+    .from("messages")
+    .insert({
+      chat_id: chatId,
+      sender_id: me.id,
+      receiver_id: receiverId,
+      image_url: imageUrl,
+      is_read: false
+    })
+    .select()
+    .single();
+
+  if (insertError) {
+    console.error(insertError);
+    alert("فشل حفظ الرسالة");
+    return;
+  }
+
+  appendMessage(newMsg);
+}
+
+/* =========================
+   أزرار
+========================= */
+document.getElementById("send").addEventListener("click", sendMessage);
+
+document.getElementById("msg").addEventListener("keypress", e => {
+  if (e.key === "Enter") sendMessage();
+});
+
+document.getElementById("imgBtn").onclick = () => {
+  document.getElementById("imageInput").click();
+};
+
+document.getElementById("imageInput")
+  .addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      await sendImage(file);
+      e.target.value = "";
+    }
+  });
+
+/* =========================
+   تشغيل
+========================= */
+await initUser();
+listenMessages();
+
+</script>
+
 
 </body>
 </html>
+
 
 
 

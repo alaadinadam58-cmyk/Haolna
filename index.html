@@ -203,8 +203,14 @@ async function initUser() {
     if (data) { me = data; return; }
   }
 
-  let name = prompt("اكتب اسمك");
-  if (!name) return;
+  <div id="loginScreen">
+  <div class="loginBox">
+    <h2>مرحباً بك 👋</h2>
+    <p>اكتب اسمك للدخول إلى الشات</p>
+    <input type="text" id="usernameInput" placeholder="اسمك">
+    <button onclick="registerUser()">دخول</button>
+  </div>
+</div>
 
   let { data } = await supabase
     .from("users")
@@ -469,6 +475,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

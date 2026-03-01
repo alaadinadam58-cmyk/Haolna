@@ -160,47 +160,10 @@ header {
   position:fixed;
   inset:0;
   background:linear-gradient(135deg,#075e54,#128c7e);
-  display:flex;
+  display:none; /* ← مهم */
   justify-content:center;
   align-items:center;
   z-index:9999;
-}
-
-.loginBox{
-  background:white;
-  padding:40px;
-  border-radius:20px;
-  width:300px;
-  text-align:center;
-  box-shadow:0 10px 30px rgba(0,0,0,0.2);
-}
-
-.loginBox h2{
-  margin-bottom:10px;
-}
-
-.loginBox input{
-  width:100%;
-  padding:10px;
-  margin:15px 0;
-  border-radius:10px;
-  border:1px solid #ccc;
-  font-size:16px;
-}
-
-.loginBox button{
-  width:100%;
-  padding:10px;
-  border:none;
-  border-radius:10px;
-  background:#128c7e;
-  color:white;
-  font-size:16px;
-  cursor:pointer;
-}
-
-.loginBox button:hover{
-  background:#0f766e;
 }
 
 </style>
@@ -283,7 +246,10 @@ async function initUser() {
 
   let saved = localStorage.getItem("uid");
 
-  if (!saved) return;
+  if (!saved) {
+    document.getElementById("loginScreen").style.display = "flex";
+    return;
+  }
 
   let { data } = await supabase
     .from("users")
@@ -293,7 +259,8 @@ async function initUser() {
 
   if (data) {
     me = data;
-    document.getElementById("loginScreen").style.display = "none";
+  } else {
+    document.getElementById("loginScreen").style.display = "flex";
   }
 }
 
@@ -550,6 +517,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

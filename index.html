@@ -339,15 +339,45 @@ async function loadMessages() {
   box.scrollTop = box.scrollHeight;
 }
 
-    // عرض الصورة
-    if (msg.image_url) {
-      let img = document.createElement("img");
-      img.src = msg.image_url;
-      img.style.maxWidth = "200px";
-      img.style.borderRadius = "10px";
-      img.style.marginTop = "5px";
-      div.appendChild(img);
-    }
+    function renderImageMessage(container, imageUrl) {
+  if (!imageUrl) return;
+
+  const img = new Image();
+  img.src = imageUrl;
+  img.alt = "Chat Image";
+  img.loading = "lazy"; // تحسين الأداء
+  img.className = "chat-image";
+
+  // في حال فشل تحميل الصورة
+  img.onerror = () => {
+    img.src = "fallback-image.png"; // صورة بديلة
+  };
+
+  // تكبير الصورة عند الضغط
+  img.addEventListener("click", () => {
+    openImagePreview(imageUrl);
+  });
+
+  container.appendChild(img);
+}
+
+// دالة عرض الصورة بحجم كامل
+function openImagePreview(url) {
+  const overlay = document.createElement("div");
+  overlay.className = "image-overlay";
+
+  const fullImg = new Image();
+  fullImg.src = url;
+
+  overlay.appendChild(fullImg);
+
+  overlay.addEventListener("click", () => {
+    document.body.removeChild(overlay);
+  });
+
+  document.body.appendChild(overlay);
+}
+
 
 /* =========================
    الاستماع الفوري
@@ -567,6 +597,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

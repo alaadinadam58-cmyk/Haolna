@@ -193,6 +193,58 @@ const supabase = createClient(
 let me = null;
 let chatId = null;
 let channel = null;
+  async function loadUsers() {
+
+  if (!me) return;
+
+  let { data: users, error } = await supabase
+    .from("users")
+    .select("*")
+    .neq("id", me.id);
+
+  if (error) {
+    console.error("Load users error:", error);
+    return;
+  }
+
+  let box = document.getElementById("user-list");
+  box.innerHTML = "";
+
+  for (let u of users) {
+
+    let btn = document.createElement("button");
+    btn.textContent = u.username;
+    btn.onclick = () => openChat(u);
+
+    box.appendChild(btn);
+  }
+}
+
+async function openChat(u) {
+
+  let { data } = await supabase
+    .from("chats")
+    .select("*")
+    .or(`and(user1.eq.${me.id},user2.eq.${u.id}),and(user1.eq.${u.id},user2.eq.${me.id})`)
+    .single();
+
+  if (!data) {
+    let res = await supabase
+      .from("chats")
+      .insert({ user1: me.id, user2: u.id })
+      .select()
+      .single();
+
+    data = res.data;
+  }
+
+  chatId = data.id;
+
+  document.getElementById("chat-header").textContent =
+    "الدردشة مع " + u.username;
+
+  await loadMessages();
+}
 
 /* =========================
    تسجيل المستخدم
@@ -425,11 +477,11 @@ document.getElementById("imageInput")
     }
   });
 
- /* =========================
+/* =========================
    تشغيل التطبيق
 ========================= */
 await initUser();
-await loadUsers();   // ← هذا السطر كان مفقود
+await loadUsers();
 listenMessages();
 
 
@@ -438,6 +490,7 @@ listenMessages();
 
 </body>
 </html>
+
 
 
 

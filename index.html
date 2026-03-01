@@ -156,11 +156,65 @@ header {
   color: red;
   font-weight: bold;
 }
+#loginScreen{
+  position:fixed;
+  inset:0;
+  background:linear-gradient(135deg,#075e54,#128c7e);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:9999;
+}
+
+.loginBox{
+  background:white;
+  padding:40px;
+  border-radius:20px;
+  width:300px;
+  text-align:center;
+  box-shadow:0 10px 30px rgba(0,0,0,0.2);
+}
+
+.loginBox h2{
+  margin-bottom:10px;
+}
+
+.loginBox input{
+  width:100%;
+  padding:10px;
+  margin:15px 0;
+  border-radius:10px;
+  border:1px solid #ccc;
+  font-size:16px;
+}
+
+.loginBox button{
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:10px;
+  background:#128c7e;
+  color:white;
+  font-size:16px;
+  cursor:pointer;
+}
+
+.loginBox button:hover{
+  background:#0f766e;
+}
 
 </style>
 </head>
 
 <body>
+<div id="loginScreen">
+  <div class="loginBox">
+    <h2>مرحباً بك 👋</h2>
+    <p>اكتب اسمك للدخول إلى الشات</p>
+    <input type="text" id="usernameInput" placeholder="اسمك">
+    <button onclick="registerUser()">دخول</button>
+  </div>
+</div>
 
 <header>دردشة حولنا</header>
 
@@ -194,25 +248,55 @@ let channel = null;
    تسجيل المستخدم
 ========================= */
 async function initUser() {
+
   let saved = localStorage.getItem("uid");
 
   if (saved) {
-    let { data } = await supabase.from("users").select("*").eq("id", saved).single();
-    if (data) { me = data; return; }
+    let { data } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", saved)
+      .single();
+
+    if (data) {
+      me = data;
+      document.getElementById("loginScreen").style.display = "none";
+      return;
+    }
   }
 
-  let name = prompt("اكتب اسمك");
-  if (!name) return;
+  // لا نفعل شيء هنا
+}
+async function registerUser(){
 
-  let { data } = await supabase
+  let name = document.getElementById("usernameInput").value.trim();
+
+  if(!name){
+    alert("اكتب اسم أولاً");
+    return;
+  }
+
+  let { data, error } = await supabase
     .from("users")
     .insert({ username: name })
     .select()
     .single();
 
+  if(error){
+    alert("حدث خطأ: " + error.message);
+    return;
+  }
+
   localStorage.setItem("uid", data.id);
   me = data;
+
+  document.getElementById("loginScreen").style.display = "none";
+
+  if(typeof loadUsers === "function"){
+    loadUsers();
+  }
 }
+
 
 /* =========================
    تحميل المستخدمين
@@ -467,6 +551,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

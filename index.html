@@ -207,14 +207,7 @@ header {
 </head>
 
 <body>
-<div id="loginScreen">
-  <div class="loginBox">
-    <h2>مرحباً بك 👋</h2>
-    <p>اكتب اسمك للدخول إلى الشات</p>
-    <input type="text" id="usernameInput" placeholder="اسمك">
-    <button onclick="registerUser()">دخول</button>
-  </div>
-</div>
+
 <header>دردشة حولنا</header>
 
 <!-- المستخدمين بالأعلى -->
@@ -229,7 +222,14 @@ header {
     <button id="send">إرسال</button>
   </div>
 </div>
-
+<div id="loginScreen">
+  <div class="loginBox">
+    <h2>مرحباً بك 👋</h2>
+    <p>اكتب اسمك للدخول إلى الشات</p>
+    <input type="text" id="usernameInput" placeholder="اسمك">
+    <button onclick="registerUser()">دخول</button>
+  </div>
+</div>
 <script type="module">
 
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
@@ -550,6 +550,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

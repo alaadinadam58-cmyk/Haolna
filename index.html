@@ -339,6 +339,16 @@ async function loadMessages() {
   box.scrollTop = box.scrollHeight;
 }
 
+    // عرض الصورة
+    if (msg.image_url) {
+      let img = document.createElement("img");
+      img.src = msg.image_url;
+      img.style.maxWidth = "200px";
+      img.style.borderRadius = "10px";
+      img.style.marginTop = "5px";
+      div.appendChild(img);
+    }
+
 /* =========================
    الاستماع الفوري
 ========================= */
@@ -557,6 +567,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

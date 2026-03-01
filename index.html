@@ -242,6 +242,35 @@ const supabase = createClient(
 let me = null;
 let chatId = null;
 let channel = null;
+async function registerUser() {
+
+  let name = document.getElementById("usernameInput").value.trim();
+
+  if (!name) {
+    alert("اكتب اسمك أولاً");
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("users")
+    .insert({ username: name })
+    .select()
+    .single();
+
+  if (error) {
+    alert("خطأ: " + error.message);
+    console.error(error);
+    return;
+  }
+
+  localStorage.setItem("uid", data.id);
+  me = data;
+
+  document.getElementById("loginScreen").style.display = "none";
+
+  await loadUsers();
+  listenMessages();
+}
 
 /* =========================
    تسجيل المستخدم
@@ -517,6 +546,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

@@ -244,6 +244,8 @@ let chatId = null;
 let channel = null;
 async function registerUser() {
 
+  async function registerUser() {
+
   let name = document.getElementById("usernameInput").value.trim();
 
   if (!name) {
@@ -271,6 +273,9 @@ async function registerUser() {
   await loadUsers();
   listenMessages();
 }
+
+window.registerUser = registerUser;
+
 
 /* =========================
    تسجيل المستخدم
@@ -546,6 +551,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

@@ -246,59 +246,23 @@ let channel = null;
 /* =========================
    تسجيل المستخدم
 ========================= */
-/* =========================
-   تسجيل المستخدم
-========================= */
 async function initUser() {
+
   let saved = localStorage.getItem("uid");
 
-  if (saved) {
-    let { data } = await supabase.from("users").select("*").eq("id", saved).single();
-    if (data) { me = data; return; }
-  }
-
-  let name = <p>اكتب اسمك للدخول إلى الشات</p>
-  if (!name) return;
+  if (!saved) return;
 
   let { data } = await supabase
     .from("users")
-    .insert({ username: name })
-    .select()
+    .select("*")
+    .eq("id", saved)
     .single();
 
-  localStorage.setItem("uid", data.id);
-  me = data;
-}
-async function registerUser(){
-
-  let name = document.getElementById("usernameInput").value.trim();
-
-  if(!name){
-    alert("اكتب اسم أولاً");
-    return;
-  }
-
-  let { data, error } = await supabase
-    .from("users")
-    .insert({ username: name })
-    .select()
-    .single();
-
-  if(error){
-    alert("حدث خطأ: " + error.message);
-    return;
-  }
-
-  localStorage.setItem("uid", data.id);
-  me = data;
-
-  document.getElementById("loginScreen").style.display = "none";
-
-  if(typeof loadUsers === "function"){
-    loadUsers();
+  if (data) {
+    me = data;
+    document.getElementById("loginScreen").style.display = "none";
   }
 }
-
 
 /* =========================
    تحميل المستخدمين
@@ -553,6 +517,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

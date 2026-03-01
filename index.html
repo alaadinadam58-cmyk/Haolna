@@ -224,14 +224,7 @@ header {
 </div>
 
 <script type="module">
-<div id="loginScreen">
-  <div class="loginBox">
-    <h2>مرحباً بك 👋</h2>
-    <p>اكتب اسمك للدخول إلى الشات</p>
-    <input type="text" id="usernameInput" placeholder="اسمك">
-    <button onclick="registerUser()">دخول</button>
-  </div>
-</div>
+
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 const supabase = createClient(
@@ -332,7 +325,14 @@ async function loadUsers() {
     box.appendChild(b);
   }
 }
-
+<div id="loginScreen">
+  <div class="loginBox">
+    <h2>مرحباً بك 👋</h2>
+    <p>اكتب اسمك للدخول إلى الشات</p>
+    <input type="text" id="usernameInput" placeholder="اسمك">
+    <button onclick="registerUser()">دخول</button>
+  </div>
+</div>
 /* =========================
    فتح محادثة
 ========================= */
@@ -550,6 +550,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

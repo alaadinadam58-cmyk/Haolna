@@ -1,165 +1,269 @@
 <!DOCTYPE html>
-<html dir="rtl">
+<html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>WhatsApp Style Chat</title>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title> حولنا</title>
 
 <style>
-body{
+body {
+  font-family: Arial, sans-serif;
   margin:0;
-  font-family:Arial;
+  padding:0;
+  background:#f2f4f7;
   display:flex;
+  flex-direction:column;
   height:100vh;
 }
 
-#users{
-  width:30%;
-  border-left:1px solid #ccc;
-  padding:10px;
-  overflow-y:auto;
-  background:#f5f5f5;
-}
-
-#users button{
+/* الهيدر */
+header {
   width:100%;
-  padding:10px;
-  margin-bottom:5px;
-  border:none;
-  background:white;
-  cursor:pointer;
-  border-radius:8px;
+  background:#1a73e8;
+  color:white;
+  padding:15px;
+  font-size:20px;
+  text-align:center;
 }
 
-#chat{
-  width:70%;
+/* المستخدمين في الأعلى */
+#user-list {
+  width:100%;
+  background:white;
+  padding:10px;
+  display:flex;
+  gap:10px;
+  overflow-x:auto;
+  border-bottom:1px solid #ddd;
+}
+
+#user-list h3 {
+  margin:0 10px;
+  display:flex;
+  align-items:center;
+}
+
+#user-list button {
+  padding:8px 15px;
+  border:none;
+  border-radius:20px;
+  cursor:pointer;
+  background:#e4e6eb;
+  white-space:nowrap;
+}
+
+#user-list button:hover {
+  background:#cfd3d8;
+}
+
+/* لوحة الدردشة */
+.chat-panel {
+  flex:1;
   display:flex;
   flex-direction:column;
-}
-
-#header{
   padding:15px;
-  background:#075e54;
-  color:white;
-  font-weight:bold;
 }
 
-#messages{
+/* عنوان الدردشة */
+#chat-header {
+  font-size:18px;
+  margin-bottom:10px;
+}
+
+/* الرسائل */
+#messages {
   flex:1;
-  padding:10px;
   overflow-y:auto;
-  background:#e5ddd5;
-}
-
-.msg{
-  max-width:60%;
-  padding:8px;
-  margin:5px 0;
-  border-radius:10px;
-  clear:both;
-  word-wrap:break-word;
-}
-
-.me{
-  background:#dcf8c6;
-  float:left;
-}
-
-.other{
   background:white;
-  float:right;
-}
-
-.msg img{
-  max-width:200px;
-  display:block;
-  margin-top:5px;
   border-radius:10px;
+  padding:15px;
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  font-size:16px;
 }
 
-#inputArea{
+/* شكل الرسائل */
+.my {
+  background:#0084ff;
+  color:white;
+  padding:8px 14px;
+  border-radius:18px;
+  align-self:flex-end;
+  max-width:70%;
+}
+
+.other {
+  background:#4caf50;
+  color:white;
+  padding:8px 14px;
+  border-radius:18px;
+  align-self:flex-start;
+  max-width:70%;
+}
+
+/* منطقة الإدخال */
+.input-area {
   display:flex;
   padding:10px;
   background:white;
+  border-top:1px solid #ddd;
 }
 
-#inputArea input[type=text]{
+#msg {
   flex:1;
-  padding:8px;
+  padding:12px;
+  border-radius:25px;
+  border:1px solid #ccc;
+  font-size:15px;
+}
+
+#send {
+  margin-left:10px;
+  padding:10px 20px;
+  border:none;
+  border-radius:25px;
+  background:#1a73e8;
+  color:white;
+  cursor:pointer;
+}
+
+#send:hover {
+  background:#1557b0;
+}
+  /* إشعار مرئي */
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #1a73e8;
+  color: white;
+  padding: 12px 18px;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  font-size: 14px;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: all 0.3s ease;
+  z-index: 9999;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.unread-badge {
+  color: red;
+  font-weight: bold;
 }
 
 </style>
 </head>
+
 <body>
 
-<div id="users"></div>
+<header>دردشة حولنا</header>
 
-<div id="chat">
-  <div id="header">اختر مستخدم</div>
+<!-- المستخدمين بالأعلى -->
+<div id="user-list"></div>
+
+<!-- الدردشة بالأسفل أكبر -->
+<div class="chat-panel">
+  <h3 id="chat-header">اختر مستخدم لبدء المحادثة</h3>
+
   <div id="messages"></div>
-  <div id="inputArea">
-    <input type="text" id="textInput" placeholder="اكتب رسالة">
-    <input type="file" id="imageInput">
-    <button onclick="sendMessage()">إرسال</button>
+
+  <div class="input-area">
+    <input id="msg" placeholder="اكتب رسالة..." />
+
+    <!-- input مخفي لرفع الصورة -->
+    <input type="file" id="imageInput" accept="image/*" style="display:none">
+
+    <!-- زر الصورة -->
+    <button id="imgBtn">📷</button>
+
+    <button id="send">إرسال</button>
   </div>
 </div>
 
-<script>
-const supabase = window.supabase.createClient(
- "https://szjeerdjuyuqyrixqihb.supabase.co",
+<script type="module">
+
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const supabase = createClient(
+  "https://szjeerdjuyuqyrixqihb.supabase.co",
   "sb_publishable_GpdhY2DBLlI0t3VdzXUWOA_dt43iBLx"
 );
+window.supabase = supabase;
 
 let me = null;
 let chatId = null;
+let channel = null;
 
-/* ======================
+/* =========================
    تسجيل المستخدم
-====================== */
-async function init(){
-  let username = prompt("ادخل اسمك");
-  if(!username) return;
+========================= */
+async function initUser() {
+  let saved = localStorage.getItem("uid");
+
+  if (saved) {
+    let { data } = await supabase.from("users").select("*").eq("id", saved).single();
+    if (data) { me = data; return; }
+  }
+
+  let name = prompt("اكتب اسمك");
+  if (!name) return;
 
   let { data } = await supabase
     .from("users")
-    .select("*")
-    .eq("username", username)
+    .insert({ username: name })
+    .select()
     .single();
 
-  if(!data){
-    let res = await supabase
-      .from("users")
-      .insert({ username })
-      .select()
-      .single();
-    me = res.data;
-  } else {
-    me = data;
-  }
-
-  loadUsers();
+  localStorage.setItem("uid", data.id);
+  me = data;
 }
 
-async function loadUsers(){
-  let { data } = await supabase
+/* =========================
+   تحميل المستخدمين
+========================= */
+async function loadUsers() {
+
+  let { data: users } = await supabase
     .from("users")
     .select("*")
     .neq("id", me.id);
 
-  let box = document.getElementById("users");
+  let box = document.getElementById("user-list");
   box.innerHTML = "";
 
-  data.forEach(u=>{
-    let btn = document.createElement("button");
-    btn.textContent = u.username;
-    btn.onclick = ()=> openChat(u);
-    box.appendChild(btn);
-  });
+  for (let u of users) {
+
+    const { count } = await supabase
+      .from("messages")
+      .select("*", { count: "exact", head: true })
+      .eq("sender_id", u.id)
+      .eq("receiver_id", me.id)
+      .eq("is_read", false);
+
+    let b = document.createElement("button");
+
+    if (count > 0) {
+      b.innerHTML = `${u.username} <span style="color:red">(${count})</span>`;
+    } else {
+      b.textContent = u.username;
+    }
+
+    b.onclick = () => openChat(u);
+
+    box.appendChild(b);
+  }
 }
 
-async function openChat(u){
-  document.getElementById("header").textContent = "الدردشة مع " + u.username;
+/* =========================
+   فتح محادثة
+========================= */
+async function openChat(u) {
 
   let { data } = await supabase
     .from("chats")
@@ -167,100 +271,315 @@ async function openChat(u){
     .or(`and(user1.eq.${me.id},user2.eq.${u.id}),and(user1.eq.${u.id},user2.eq.${me.id})`)
     .single();
 
-  if(!data){
+  if (!data) {
     let res = await supabase
       .from("chats")
       .insert({ user1: me.id, user2: u.id })
       .select()
       .single();
+
     data = res.data;
   }
 
   chatId = data.id;
-  loadMessages();
+
+  document.getElementById("chat-header").textContent = "الدردشة مع " + u.username;
+
+  await loadMessages();
+
+  await supabase
+    .from("messages")
+    .update({ is_read: true })
+    .eq("chat_id", chatId)
+    .eq("receiver_id", me.id);
+
+  loadUsers();
 }
 
-async function loadMessages(){
+/* =========================
+   تحميل الرسائل
+========================= */
+async function loadMessages() {
+
   let { data } = await supabase
     .from("messages")
-    .select("*")
+    .select(`
+      id,
+      text,
+      image_url,
+      sender_id,
+      sender:sender_id ( username )
+    `)
     .eq("chat_id", chatId)
-    .order("created_at");
+    .order("created_at", { ascending: true });
 
   let box = document.getElementById("messages");
   box.innerHTML = "";
 
-  data.forEach(msg=>{
-    appendMessage(msg);
+  data.forEach(msg => {
+
+    let div = document.createElement("div");
+    div.id = "msg-" + msg.id;
+
+    if (msg.sender_id === me.id) {
+      div.className = "my";
+    } else {
+      div.className = "other";
+    }
+
+    // عرض النص
+    if (msg.text) {
+      let text = document.createElement("div");
+
+      if (msg.sender_id === me.id) {
+        text.textContent = msg.text;
+      } else {
+        text.textContent = msg.sender?.username + ": " + msg.text;
+      }
+
+      div.appendChild(text);
+    }
+
+    // عرض الصورة
+    if (msg.image_url) {
+      let img = document.createElement("img");
+      img.src = msg.image_url;
+      img.style.maxWidth = "200px";
+      img.style.borderRadius = "10px";
+      img.style.marginTop = "5px";
+      div.appendChild(img);
+    }
+
+    // زر الحذف لرسائلي فقط
+    if (msg.sender_id === me.id) {
+      let del = document.createElement("button");
+      del.textContent = "🗑";
+      del.style.marginRight = "6px";
+      del.onclick = async () => {
+        await supabase.from("messages").delete().eq("id", msg.id);
+      };
+      div.appendChild(del);
+    }
+
+    box.appendChild(div);
   });
 
   box.scrollTop = box.scrollHeight;
 }
 
-function appendMessage(msg){
-  let div = document.createElement("div");
-  div.className = "msg " + (msg.sender_id === me.id ? "me":"other");
 
-  if(msg.text){
-    div.innerText = msg.text;
-  }
+/* =========================
+   الاستماع الفوري
+========================= */
+function listenMessages() {
 
-  if(msg.image_url){
-    let img = document.createElement("img");
-    img.src = msg.image_url;
-    div.appendChild(img);
-  }
+  if (channel) supabase.removeChannel(channel);
 
-  document.getElementById("messages").appendChild(div);
+  channel = supabase
+    .channel("realtime-messages")
+
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "messages"
+      },
+      async (payload) => {
+
+        const msg = payload.new;
+
+        // لا تعرض رسالتي (أنا أعرضها محلياً)
+        if (msg.sender_id === me.id) return;
+
+        // لو الرسالة ليست في الشات المفتوح
+        if (msg.chat_id !== chatId) {
+          loadUsers();
+          return;
+        }
+
+        // منع التكرار
+        if (document.getElementById("msg-" + msg.id)) return;
+
+        // جلب اسم المرسل
+        const { data: user } = await supabase
+          .from("users")
+          .select("username")
+          .eq("id", msg.sender_id)
+          .single();
+
+        let box = document.getElementById("messages");
+
+        let div = document.createElement("div");
+        div.id = "msg-" + msg.id;
+        div.className = "other";
+        div.textContent = user.username + ": " + msg.text;
+
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+
+        // تحديثها كمقروءة
+        await supabase
+          .from("messages")
+          .update({ is_read: true })
+          .eq("id", msg.id);
+
+        loadUsers();
+      }
+    )
+
+    .on(
+      "postgres_changes",
+      {
+        event: "DELETE",
+        schema: "public",
+        table: "messages"
+      },
+      (payload) => {
+        let el = document.getElementById("msg-" + payload.old.id);
+        if (el) el.remove();
+      }
+    )
+
+    .subscribe();
 }
 
-async function sendMessage(){
-  if(!chatId) return;
 
-  let text = document.getElementById("textInput").value;
-  let file = document.getElementById("imageInput").files[0];
+/* =========================
+   إرسال رسالة
+========================= */
+async function sendMessage() {
 
-  let imageUrl = null;
+  let input = document.getElementById("msg");
+  let text = input.value.trim();
 
-  if(file){
-    let fileName = Date.now()+"-"+file.name;
+  if (!text || !chatId) return;
 
-    await supabase.storage
+  const { data: chat } = await supabase
+    .from("chats")
+    .select("user1, user2")
+    .eq("id", chatId)
+    .single();
+
+  let receiverId = chat.user1 === me.id ? chat.user2 : chat.user1;
+
+  const { data } = await supabase
+    .from("messages")
+    .insert({
+      chat_id: chatId,
+      sender_id: me.id,
+      receiver_id: receiverId,
+      text: text,
+      is_read: false
+    })
+    .select()
+    .single();
+
+  input.value = "";
+
+  await loadMessages();
+}
+/* =========================
+   إرسال صورة
+========================= */
+/* =========================
+   إرسال صورة
+========================= */
+async function sendImage(file) {
+
+  try {
+
+    if (!file || !chatId) return;
+
+    // جلب بيانات المحادثة
+    const { data: chat, error: chatError } = await supabase
+      .from("chats")
+      .select("user1, user2")
+      .eq("id", chatId)
+      .single();
+
+    if (chatError) {
+      console.error("Chat error:", chatError);
+      alert("خطأ في جلب بيانات المحادثة");
+      return;
+    }
+
+    let receiverId =
+      chat.user1 === me.id ? chat.user2 : chat.user1;
+
+    // اسم فريد للصورة
+    const fileName = Date.now() + "-" + file.name;
+
+    // رفع الصورة إلى Storage
+    const { error: uploadError } = await supabase
+      .storage
       .from("chat-images")
       .upload(fileName, file);
 
-    imageUrl = supabase.storage
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      alert("فشل رفع الصورة - تحقق من إعدادات Storage");
+      return;
+    }
+
+    // الحصول على الرابط الصحيح
+    const { data } = supabase
+      .storage
       .from("chat-images")
-      .getPublicUrl(fileName).data.publicUrl;
+      .getPublicUrl(fileName);
+
+    const imageUrl = data.publicUrl;
+
+    // حفظ الرسالة في قاعدة البيانات
+    const { error: insertError } = await supabase
+      .from("messages")
+      .insert({
+        chat_id: chatId,
+        sender_id: me.id,
+        receiver_id: receiverId,
+        image_url: imageUrl,
+        is_read: false
+      });
+
+    if (insertError) {
+      console.error("Insert error:", insertError);
+      alert("فشل حفظ الرسالة");
+      return;
+    }
+
+    await loadMessages();
+
+  } catch (err) {
+    console.error("Unexpected error:", err);
+    alert("حدث خطأ غير متوقع");
   }
-
-  await supabase.from("messages").insert({
-    chat_id: chatId,
-    sender_id: me.id,
-    text: text || null,
-    image_url: imageUrl
-  });
-
-  document.getElementById("textInput").value="";
-  document.getElementById("imageInput").value="";
 }
 
-supabase.channel("realtime")
-.on("postgres_changes",
-  { event:"INSERT", schema:"public", table:"messages" },
-  payload=>{
-    if(payload.new.chat_id === chatId){
-      appendMessage(payload.new);
-      document.getElementById("messages").scrollTop =
-      document.getElementById("messages").scrollHeight;
+
+document.getElementById("imgBtn").onclick = () => {
+  document.getElementById("imageInput").click();
+};
+
+document.getElementById("imageInput")
+  .addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      await sendImage(file);
+      e.target.value = "";
     }
-  }
-)
-.subscribe();
+  });
 
-init();
+
+/* =========================
+   تشغيل التطبيق
+========================= */
+await initUser();
+await loadUsers();
+listenMessages();
+
+
+
 </script>
-
 </body>
 </html>
 

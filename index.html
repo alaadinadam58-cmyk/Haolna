@@ -202,60 +202,26 @@ let channel = null;
 /* =========================
    تسجيل المستخدم
 ========================= */
-/* =========================
-   تسجيل المستخدم
-========================= */
 async function initUser() {
-
   let saved = localStorage.getItem("uid");
 
   if (saved) {
-    let { data } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", saved)
-      .single();
-
-    if (data) {
-      me = data;
-      document.getElementById("loginScreen").style.display = "none";
-      return;
-    }
+    let { data } = await supabase.from("users").select("*").eq("id", saved).single();
+    if (data) { me = data; return; }
   }
 
-  // لا نفعل شيء هنا
-}
-async function registerUser(){
+  let name = prompt("اكتب اسمك");
+  if (!name) return;
 
-  let name = document.getElementById("usernameInput").value.trim();
-
-  if(!name){
-    alert("اكتب اسم أولاً");
-    return;
-  }
-
-  let { data, error } = await supabase
+  let { data } = await supabase
     .from("users")
     .insert({ username: name })
     .select()
     .single();
 
-  if(error){
-    alert("حدث خطأ: " + error.message);
-    return;
-  }
-
   localStorage.setItem("uid", data.id);
   me = data;
-
-  document.getElementById("loginScreen").style.display = "none";
-
-  if(typeof loadUsers === "function"){
-    loadUsers();
-  }
 }
-
-
 
 /* =========================
    تحميل المستخدمين
@@ -510,10 +476,6 @@ listenMessages();
 </script>
 </body>
 </html>
-
-
-
-
 
 
 

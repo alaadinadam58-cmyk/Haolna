@@ -163,7 +163,14 @@ header {
 </head>
 
 <body>
-
+<div id="loginScreen">
+  <div class="loginBox">
+    <h2>مرحباً بك 👋</h2>
+    <p>اكتب اسمك للدخول إلى الشات</p>
+    <input type="text" id="usernameInput" placeholder="اسمك">
+    <button onclick="registerUser()">دخول</button>
+  </div>
+</div>
 <header>دردشة حولنا</header>
 
 <!-- المستخدمين بالأعلى -->
@@ -195,32 +202,60 @@ let channel = null;
 /* =========================
    تسجيل المستخدم
 ========================= */
+/* =========================
+   تسجيل المستخدم
+========================= */
 async function initUser() {
+
   let saved = localStorage.getItem("uid");
 
   if (saved) {
-    let { data } = await supabase.from("users").select("*").eq("id", saved).single();
-    if (data) { me = data; return; }
+    let { data } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", saved)
+      .single();
+
+    if (data) {
+      me = data;
+      document.getElementById("loginScreen").style.display = "none";
+      return;
+    }
   }
 
-  <div id="loginScreen">
-  <div class="loginBox">
-    <h2>مرحباً بك 👋</h2>
-    <p>اكتب اسمك للدخول إلى الشات</p>
-    <input type="text" id="usernameInput" placeholder="اسمك">
-    <button onclick="registerUser()">دخول</button>
-  </div>
-</div>
+  // لا نفعل شيء هنا
+}
+async function registerUser(){
 
-  let { data } = await supabase
+  let name = document.getElementById("usernameInput").value.trim();
+
+  if(!name){
+    alert("اكتب اسم أولاً");
+    return;
+  }
+
+  let { data, error } = await supabase
     .from("users")
     .insert({ username: name })
     .select()
     .single();
 
+  if(error){
+    alert("حدث خطأ: " + error.message);
+    return;
+  }
+
   localStorage.setItem("uid", data.id);
   me = data;
+
+  document.getElementById("loginScreen").style.display = "none";
+
+  if(typeof loadUsers === "function"){
+    loadUsers();
+  }
 }
+
+
 
 /* =========================
    تحميل المستخدمين
@@ -475,6 +510,7 @@ listenMessages();
 </script>
 </body>
 </html>
+
 
 
 

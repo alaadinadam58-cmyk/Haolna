@@ -1,0 +1,17 @@
+name: Keep Haolna Supabase Active Securely
+
+on:
+  schedule:
+    # يعمل تلقائياً يومياً في منتصف النهار
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping-haolna-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Real Query to Haolna Supabase Database
+        run: |
+          curl -i -X GET "https://[رابط_مشروع_Haolna_الخاص_بك].supabase.co/rest/v1/users?limit=1" \
+            -H "apikey: ${{ secrets.HAOLNA_SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.HAOLNA_SUPABASE_ANON_KEY }}"
